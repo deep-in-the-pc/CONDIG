@@ -1022,6 +1022,12 @@
             <layout class="QHBoxLayout" name="horizontalLayout_11">
              <item>
               <widget class="QLabel" name="label_25">
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>Tempo de amostragem</string>
                </property>
@@ -1031,7 +1037,7 @@
               <widget class="QLineEdit" name="temp1TAEdit">
                <property name="maximumSize">
                 <size>
-                 <width>200</width>
+                 <width>95</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -1041,6 +1047,9 @@
                <property name="text">
                 <string/>
                </property>
+               <property name="maxLength">
+                <number>4</number>
+               </property>
                <property name="placeholderText">
                 <string>(em milisegundos)</string>
                </property>
@@ -1048,6 +1057,15 @@
              </item>
              <item>
               <widget class="QCheckBox" name="temp1TcheckBox">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>95</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>Temperatura 1</string>
                </property>
@@ -1057,15 +1075,39 @@
            </item>
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_13">
+             <property name="spacing">
+              <number>0</number>
+             </property>
              <item>
               <widget class="QCheckBox" name="temp1PcheckBox">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>30</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>P</string>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QCheckBox" name="temp1IcheckBox">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>30</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>I</string>
                </property>
@@ -1073,6 +1115,15 @@
              </item>
              <item>
               <widget class="QCheckBox" name="temp1DcheckBox">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>30</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>D</string>
                </property>
@@ -1080,6 +1131,15 @@
              </item>
              <item>
               <widget class="QCheckBox" name="temp1UcheckBox">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>30</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>u</string>
                </property>
@@ -1091,6 +1151,12 @@
             <layout class="QHBoxLayout" name="horizontalLayout_12">
              <item>
               <widget class="QLabel" name="label_26">
+               <property name="maximumSize">
+                <size>
+                 <width>110</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>Tempo de amostragem</string>
                </property>
@@ -1100,9 +1166,12 @@
               <widget class="QLineEdit" name="temp2TAEdit">
                <property name="maximumSize">
                 <size>
-                 <width>200</width>
+                 <width>95</width>
                  <height>16777215</height>
                 </size>
+               </property>
+               <property name="maxLength">
+                <number>4</number>
                </property>
                <property name="placeholderText">
                 <string>(em milisegundos)</string>
@@ -1111,6 +1180,15 @@
              </item>
              <item>
               <widget class="QCheckBox" name="temp2TcheckBox">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>95</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>Temperatura 2</string>
                </property>
@@ -1122,6 +1200,15 @@
             <layout class="QHBoxLayout" name="horizontalLayout_14">
              <item>
               <widget class="QCheckBox" name="temp2PcheckBox">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>30</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>P</string>
                </property>
@@ -1129,6 +1216,15 @@
              </item>
              <item>
               <widget class="QCheckBox" name="temp2IcheckBox">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>30</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>I</string>
                </property>
@@ -1136,6 +1232,15 @@
              </item>
              <item>
               <widget class="QCheckBox" name="temp2DcheckBox">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>30</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>D</string>
                </property>
@@ -1143,6 +1248,15 @@
              </item>
              <item>
               <widget class="QCheckBox" name="temp2UcheckBox">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>30</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string>u</string>
                </property>
@@ -1156,6 +1270,12 @@
           <layout class="QVBoxLayout" name="verticalLayout_9">
            <item>
             <widget class="QLabel" name="label_2">
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>20</height>
+              </size>
+             </property>
              <property name="text">
               <string>Referência do ADC</string>
              </property>
@@ -1163,6 +1283,12 @@
            </item>
            <item>
             <widget class="QRadioButton" name="ref3v3RButton">
+             <property name="maximumSize">
+              <size>
+               <width>50</width>
+               <height>16777215</height>
+              </size>
+             </property>
              <property name="text">
               <string>3,3V</string>
              </property>
@@ -1173,6 +1299,12 @@
            </item>
            <item>
             <widget class="QRadioButton" name="ref5vButton">
+             <property name="maximumSize">
+              <size>
+               <width>50</width>
+               <height>16777215</height>
+              </size>
+             </property>
              <property name="text">
               <string>5V</string>
              </property>

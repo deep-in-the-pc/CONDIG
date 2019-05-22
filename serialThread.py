@@ -2,13 +2,14 @@
 #for serial comms
 import threading
 import serial.tools.list_ports
-import serial
+from serial import Serial
 import re
 #for storage
 import json
 import time
 
-from PyQt5.QtCore import QThread, pyqtSignal, QtCore
+from PyQt5 import QtCore
+from PyQt5.QtCore import QThread, pyqtSignal
 
 
 
@@ -135,10 +136,10 @@ class serialThread (QThread):
         self.temperature1_qtimer = QtCore.QTimer(self)
         self.temperature1_qtimer.timeout.connect(self.temperature1TimerCB)
 
-    def temperature1TimerStart(self):
+    def temperature2TimerStart(self):
         self.temperature1_qtimer.start(self.temperature1DeltaTime)
 
-    def temperature1TimerSetup(self):
+    def temperature2TimerSetup(self):
         self.temperature2_qtimer = QtCore.QTimer(self)
         self.temperature2_qtimer.timeout.connect(self.temperature2TimerCB)
 
