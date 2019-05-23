@@ -37,13 +37,29 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.comlist_qtimer.timeout.connect(self.getCOMList)
         self.comlist_qtimer_interval = 100
         self.comlist_qtimer.start(self.comlist_qtimer_interval)
+        self.guiupdate_qtimer = QtCore.QTimer(self)
+        self.guiupdate_qtimer.timeout.connect(self.updateGUI)
+        self.guiupdate_qtimer_interval = 1000
 
         #Graph
         self.temp1TA = None
         self.temp2TA = None
         self.plots = []
         self.plotsObjects = []
+        self.maxnumberofpoints1 = None
+        self.maxnumberofpoints2 = None
 
+        self.temp1T = 0
+        self.temp1P = 0
+        self.temp1I = 0
+        self.temp1D = 0
+        self.temp1U = 0
+
+        self.temp2T = 0
+        self.temp2P = 0
+        self.temp2I = 0
+        self.temp2D = 0
+        self.temp2U = 0
 
         #CallBacks
 
@@ -139,6 +155,101 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.is_connected = False
     #Graph
 
+    def updateGUI(self):
+        nplots = 0
+        for n, plot in self.plots:
+            if n == 1:
+                for item in self.plotsObjects[nplots][0].listDataItems():
+                    if item.name() == "Temperatura 1":
+                        self.plotsObjects[nplots][0].removeItem(item)
+                temp = self.plotsObjects[nplots][0].plot(self.temp1T_x[:self.temp1Count], self.temp1T_y[:self.temp1Count], pen=(255, 0, 0),name="Temperatura 1")
+                self.plotsObjects[nplots][1].removeItem('Temperatura 1')
+                self.plotsObjects[nplots][1].addItem(temp, 'Temperatura 1')
+                nplots = nplots + 1
+            elif n == 2:
+
+                if 'P' in plot:
+                    for item in self.plotsObjects[nplots][0].listDataItems():
+                        if item.name() == "Componente proporcional 1":
+                            self.plotsObjects[nplots][0].removeItem(item)
+                    temp = self.plotsObjects[nplots][0].plot(self.temp1P_x[:self.temp1Count], self.temp1P_y[:self.temp1Count], pen=(255, 0, 0),
+                                                             name="Componente proporcional 1")
+                    self.plotsObjects[nplots][1].removeItem('Componente proporcional 1')
+                    self.plotsObjects[nplots][1].addItem(temp, 'Componente proporcional 1')
+                if 'I' in plot:
+                    for item in self.plotsObjects[nplots][0].listDataItems():
+                        if item.name() == "Componente integrativa 1":
+                            self.plotsObjects[nplots][0].removeItem(item)
+                    temp = self.plotsObjects[nplots][0].plot(self.temp1I_x[:self.temp1Count], self.temp1I_y[:self.temp1Count], pen=(0, 255, 0),
+                                                             name="Componente integrativa 1")
+                    self.plotsObjects[nplots][1].removeItem('Componente integrativa 1')
+                    self.plotsObjects[nplots][1].addItem(temp, 'Componente integrativa 1')
+                if 'D' in plot:
+                    for item in self.plotsObjects[nplots][0].listDataItems():
+                        if item.name() == "Componente derivativa 1":
+                            self.plotsObjects[nplots][0].removeItem(item)
+                    temp = self.plotsObjects[nplots][0].plot(self.temp1D_x[:self.temp1Count], self.temp1D_y[:self.temp1Count], pen=(0, 0, 255),
+                                                             name="Componente derivativa 1")
+                    self.plotsObjects[nplots][1].removeItem('Componente derivativa 1')
+                    self.plotsObjects[nplots][1].addItem(temp, 'Componente derivativa 1')
+                if 'U' in plot:
+                    for item in self.plotsObjects[nplots][0].listDataItems():
+                        if item.name() == "Sinal de entrada 1":
+                            self.plotsObjects[nplots][0].removeItem(item)
+                    temp = self.plotsObjects[nplots][0].plot(self.temp1U_x[:self.temp1Count], self.temp1U_y[:self.temp1Count], pen=(191, 191, 0),
+                                                             name="Sinal de entrada 1")
+                    self.plotsObjects[nplots][1].removeItem('Sinal de entrada 1')
+                    self.plotsObjects[nplots][1].addItem(temp, 'Sinal de entrada 1')
+
+                nplots = nplots + 1
+
+            elif n == 3:
+
+                for item in self.plotsObjects[nplots][0].listDataItems():
+                    if item.name() == "Temperatura 2":
+                        self.plotsObjects[nplots][0].removeItem(item)
+                temp = self.plotsObjects[nplots][0].plot(self.temp2T_x[:self.temp2Count], self.temp2T_y[:self.temp2Count], pen=(255, 0, 0),name="Temperatura 2")
+                self.plotsObjects[nplots][1].removeItem('Temperatura 2')
+                self.plotsObjects[nplots][1].addItem(temp, 'Temperatura 2')
+                nplots = nplots + 1
+
+            elif n == 4:
+
+                if 'P' in plot:
+                    for item in self.plotsObjects[nplots][0].listDataItems():
+                        if item.name() == "Componente proporcional 2":
+                            self.plotsObjects[nplots][0].removeItem(item)
+                    temp = self.plotsObjects[nplots][0].plot(self.temp2P_x[:self.temp2Count], self.temp2P_y[:self.temp2Count], pen=(255, 0, 0),
+                                                             name="Componente proporcional 2")
+                    self.plotsObjects[nplots][1].removeItem('Componente proporcional 2')
+                    self.plotsObjects[nplots][1].addItem(temp, 'Componente proporcional 2')
+                if 'I' in plot:
+                    for item in self.plotsObjects[nplots][0].listDataItems():
+                        if item.name() == "Componente integrativa 2":
+                            self.plotsObjects[nplots][0].removeItem(item)
+                    temp = self.plotsObjects[nplots][0].plot(self.temp2I_x[:self.temp2Count], self.temp2I_y[:self.temp2Count], pen=(0, 255, 0),
+                                                             name="Componente integrativa 2")
+                    self.plotsObjects[nplots][1].removeItem('Componente integrativa 2')
+                    self.plotsObjects[nplots][1].addItem(temp, 'Componente integrativa 2')
+                if 'D' in plot:
+                    for item in self.plotsObjects[nplots][0].listDataItems():
+                        if item.name() == "Componente derivativa 2":
+                            self.plotsObjects[nplots][0].removeItem(item)
+                    temp = self.plotsObjects[nplots][0].plot(self.temp2D_x[:self.temp2Count], self.temp2D_y[:self.temp2Count], pen=(0, 0, 255),
+                                                             name="Componente derivativa 2")
+                    self.plotsObjects[nplots][1].removeItem('Componente derivativa 2')
+                    self.plotsObjects[nplots][1].addItem(temp, 'Componente derivativa 2')
+                if 'U' in plot:
+                    for item in self.plotsObjects[nplots][0].listDataItems():
+                        if item.name() == "Sinal de entrada 2":
+                            self.plotsObjects[nplots][0].removeItem(item)
+                    temp = self.plotsObjects[nplots][0].plot(self.temp2U_x[:self.temp2Count], self.temp2U_y[:self.temp2Count], pen=(191, 191, 0),
+                                                             name="Sinal de entrada 2")
+                    self.plotsObjects[nplots][1].removeItem('Sinal de entrada 2')
+                    self.plotsObjects[nplots][1].addItem(temp, 'Sinal de entrada 2')
+
+                nplots = nplots + 1
+
     def graphWindowSetup(self):
 
         self.ui.graphWindow.clear()
@@ -149,7 +260,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         nplots = 0
         for n, plot in self.plots:
             if n == 1:
-
                 plot = self.ui.graphWindow.addPlot(row=nplots, col=0, title='Temperatura 1')
                 plot.showGrid(x=True, y=True, alpha=0.7)
                 legend = LegendItem((80, 30), offset=(60, 30))
@@ -201,47 +311,67 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 nplots = nplots + 1
 
 
-    def graphArraysSetup(self):
-
-        for n, plot in self.plots:
-            if n == 1:
-                maxnumberofpoints = round(300*(1000.0/self.temp1TA))
-                self.temp1T_x = np.zeros(maxnumberofpoints)
-                self.temp1T_y = np.zeros(maxnumberofpoints)
-
-
-            elif n == 2:
-                maxnumberofpoints = round(300 * (1000.0 / self.temp1TA))
-                if 'P' in plot:
-                    self.temp1P_x = np.zeros(maxnumberofpoints)
-                    self.temp1P_y = np.zeros(maxnumberofpoints)
-                if 'I' in plot:
-                    self.temp1I_x = np.zeros(maxnumberofpoints)
-                    self.temp1I_y = np.zeros(maxnumberofpoints)
-                if 'D' in plot:
-                    self.temp1D_x = np.zeros(maxnumberofpoints)
-                    self.temp1D_y = np.zeros(maxnumberofpoints)
-                if 'U' in plot:
-                    self.temp1U_x = np.zeros(maxnumberofpoints)
-                    self.temp1U_y = np.zeros(maxnumberofpoints)
-            elif n == 3:
-                maxnumberofpoints = round(300*(1000.0/self.temp2TA))
-                self.temp2T_x = np.zeros(maxnumberofpoints)
-                self.temp2T_y = np.zeros(maxnumberofpoints)
-            elif n == 4:
-                maxnumberofpoints = round(300 * (1000.0 / self.temp2TA))
-                if 'P' in plot:
-                    self.temp2P_x = np.zeros(maxnumberofpoints)
-                    self.temp2P_y = np.zeros(maxnumberofpoints)
-                if 'I' in plot:
-                    self.temp2I_x = np.zeros(maxnumberofpoints)
-                    self.temp2I_y = np.zeros(maxnumberofpoints)
-                if 'D' in plot:
-                    self.temp2D_x = np.zeros(maxnumberofpoints)
-                    self.temp2D_y = np.zeros(maxnumberofpoints)
-                if 'U' in plot:
-                    self.temp2U_x = np.zeros(maxnumberofpoints)
-                    self.temp2U_y = np.zeros(maxnumberofpoints)
+    def graphArraysSetup(self, plot):
+        if plot == 1:
+            self.temp1Count = 0
+            self.temp1T_x = np.zeros(self.maxnumberofpoints1)
+            self.temp1T_y = np.zeros(self.maxnumberofpoints1)
+            self.temp1P_x = np.zeros(self.maxnumberofpoints1)
+            self.temp1P_y = np.zeros(self.maxnumberofpoints1)
+            self.temp1I_x = np.zeros(self.maxnumberofpoints1)
+            self.temp1I_y = np.zeros(self.maxnumberofpoints1)
+            self.temp1D_x = np.zeros(self.maxnumberofpoints1)
+            self.temp1D_y = np.zeros(self.maxnumberofpoints1)
+            self.temp1U_x = np.zeros(self.maxnumberofpoints1)
+            self.temp1U_y = np.zeros(self.maxnumberofpoints1)
+        if plot == 2:
+            self.temp2Count = 0
+            self.temp2T_x = np.zeros(self.maxnumberofpoints2)
+            self.temp2T_y = np.zeros(self.maxnumberofpoints2)
+            self.temp2P_x = np.zeros(self.maxnumberofpoints2)
+            self.temp2P_y = np.zeros(self.maxnumberofpoints2)
+            self.temp2I_x = np.zeros(self.maxnumberofpoints2)
+            self.temp2I_y = np.zeros(self.maxnumberofpoints2)
+            self.temp2D_x = np.zeros(self.maxnumberofpoints2)
+            self.temp2D_y = np.zeros(self.maxnumberofpoints2)
+            self.temp2U_x = np.zeros(self.maxnumberofpoints2)
+            self.temp2U_y = np.zeros(self.maxnumberofpoints2)
+        # for n, plot in self.plots:
+        #     if n == 1:
+        #
+        #         self.temp1T_x = np.zeros(self.maxnumberofpoints1)
+        #         self.temp1T_y = np.zeros(self.maxnumberofpoints1)
+        #
+        #
+        #     elif n == 2:
+        #         if 'P' in plot:
+        #             self.temp1P_x = np.zeros(self.maxnumberofpoints1)
+        #             self.temp1P_y = np.zeros(self.maxnumberofpoints1)
+        #         if 'I' in plot:
+        #             self.temp1I_x = np.zeros(self.maxnumberofpoints1)
+        #             self.temp1I_y = np.zeros(self.maxnumberofpoints1)
+        #         if 'D' in plot:
+        #             self.temp1D_x = np.zeros(self.maxnumberofpoints1)
+        #             self.temp1D_y = np.zeros(self.maxnumberofpoints1)
+        #         if 'U' in plot:
+        #             self.temp1U_x = np.zeros(self.maxnumberofpoints1)
+        #             self.temp1U_y = np.zeros(self.maxnumberofpoints1)
+        #     elif n == 3:
+        #         self.temp2T_x = np.zeros(self.maxnumberofpoints2)
+        #         self.temp2T_y = np.zeros(self.maxnumberofpoints2)
+        #     elif n == 4:
+        #         if 'P' in plot:
+        #             self.temp2P_x = np.zeros(self.maxnumberofpoints2)
+        #             self.temp2P_y = np.zeros(self.maxnumberofpoints2)
+        #         if 'I' in plot:
+        #             self.temp2I_x = np.zeros(self.maxnumberofpoints2)
+        #             self.temp2I_y = np.zeros(self.maxnumberofpoints2)
+        #         if 'D' in plot:
+        #             self.temp2D_x = np.zeros(self.maxnumberofpoints2)
+        #             self.temp2D_y = np.zeros(self.maxnumberofpoints2)
+        #         if 'U' in plot:
+        #             self.temp2U_x = np.zeros(self.maxnumberofpoints2)
+        #             self.temp2U_y = np.zeros(self.maxnumberofpoints2)
 
     #Callbacks
 
@@ -272,21 +402,42 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.ui.ref5vButton.setEnabled(True)
 
                 self.ui.temp1TAEdit.setText('500')
+                self.ui.temp1TcheckBox.setEnabled(True)
+                self.ui.temp1PcheckBox.setEnabled(True)
+                self.ui.temp1IcheckBox.setEnabled(True)
+                self.ui.temp1DcheckBox.setEnabled(True)
+                self.ui.temp1UcheckBox.setEnabled(True)
                 self.temp1TA = 500
                 self.ui.temp2TAEdit.setText('500')
+                self.ui.temp2TcheckBox.setEnabled(True)
+                self.ui.temp2PcheckBox.setEnabled(True)
+                self.ui.temp2IcheckBox.setEnabled(True)
+                self.ui.temp2DcheckBox.setEnabled(True)
+                self.ui.temp2UcheckBox.setEnabled(True)
                 self.temp2TA = 500
     def t1EnviarCB(self):
         if self.is_connected:
-            self.serialListenerThread.transistor1 = self.ui.t1SBox.value()
+            self.temp1U = self.ui.t1SBox.value()
+            self.serialListenerThread.transistor1 = self.temp1U
             self.serialListenerThread.setTransistor1.set()
             self.serialListenerThread.temperature1DeltaTime = self.temp1TA/1000.0
             self.serialListenerThread.getTemperature1.set()
+            self.maxnumberofpoints1 = round(300 * (1000.0 / self.temp1TA))
+            self.graphArraysSetup(1)
+        if not self.guiupdate_qtimer.isActive():
+            self.guiupdate_qtimer.start(self.guiupdate_qtimer_interval)
     def t2EnviarCB(self):
         if self.is_connected:
-            self.serialListenerThread.transistor2 = self.ui.t2SBox.value()
+            self.temp1U = self.ui.t2SBox.value()
+            self.serialListenerThread.transistor2 = self.temp1U
             self.serialListenerThread.setTransistor2.set()
             self.serialListenerThread.temperature2DeltaTime = self.temp2TA/1000.0
             self.serialListenerThread.getTemperature2.set()
+
+            self.maxnumberofpoints2 = round(300 * (1000.0 / self.temp2TA))
+            self.graphArraysSetup(2)
+        if not self.guiupdate_qtimer.isActive():
+            self.guiupdate_qtimer.start(self.guiupdate_qtimer_interval)
     def l1EnviarCB(self):
         if self.is_connected:
             self.serialListenerThread.led1 = self.ui.l1SBox.value()
@@ -302,6 +453,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if(state==0):
             self.plots.remove((1, 'temp1T'))
 
+        self.graphArraysSetup(1)
         self.graphWindowSetup()
 
     def temp1PIDUcheckboxCB(self, state):
@@ -323,6 +475,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if not txt == "temp1":
             self.plots.append((2, txt))
 
+        self.graphArraysSetup(1)
         self.graphWindowSetup()
 
     def temp2TcheckboxCB(self, state):
@@ -330,8 +483,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.plots.append((3, 'temp2T'))
         if(state==0):
             self.plots.remove((3, 'temp2T'))
-        if len(self.plots):
-            self.graphWindowSetup()
+
+        self.graphArraysSetup(2)
+        self.graphWindowSetup()
 
     def temp2PIDUcheckboxCB(self, state):
 
@@ -352,6 +506,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if not txt == "temp2":
             self.plots.append((4, txt))
 
+        self.graphArraysSetup(2)
         self.graphWindowSetup()
 
     def temp1TAEditValidateCB(self):
@@ -424,10 +579,101 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp2UcheckBox.setEnabled(False)
 
     def temperature1CB(self, temp):
-        print('Temperature 1',temp)
+        self.temp1T = temp
+
+        if (self.temp1Count < self.maxnumberofpoints1):
+
+            time = self.temp1Count * self.temp1TA / 1000.0
+            self.temp1T_y[self.temp1Count] = self.temp1T
+            self.temp1P_y[self.temp1Count] = self.temp1P
+            self.temp1I_y[self.temp1Count] = self.temp1I
+            self.temp1D_y[self.temp1Count] = self.temp1D
+            self.temp1U_y[self.temp1Count] = self.temp1U
+
+            self.temp1T_x[self.temp1Count] = time
+            self.temp1P_x[self.temp1Count] = time
+            self.temp1I_x[self.temp1Count] = time
+            self.temp1D_x[self.temp1Count] = time
+            self.temp1U_x[self.temp1Count] = time
+            self.temp1Count = self.temp1Count + 1
+        else:
+
+            lasttime = self.temp1T_y[-1]
+            time = lasttime + self.temp1TA / 1000.0
+            self.temp1T_y = np.roll(self.temp1T_y, -1)
+            self.temp1P_y = np.roll(self.temp1P_y, -1)
+            self.temp1I_y = np.roll(self.temp1I_y, -1)
+            self.temp1D_y = np.roll(self.temp1D_y, -1)
+            self.temp1U_y = np.roll(self.temp1U_y, -1)
+
+            self.temp1T_x = np.roll(self.temp1T_x, -1)
+            self.temp1P_x = np.roll(self.temp1P_x, -1)
+            self.temp1I_x = np.roll(self.temp1I_x, -1)
+            self.temp1D_x = np.roll(self.temp1D_x, -1)
+            self.temp1U_x = np.roll(self.temp1U_x, -1)
+
+            self.temp1T_y[-1] = self.temp1T
+            self.temp1P_y[-1] = self.temp1P
+            self.temp1I_y[-1] = self.temp1I
+            self.temp1D_y[-1] = self.temp1D
+            self.temp1U_y[-1] = self.temp1U
+            
+            self.temp1T_x[-1] = time
+            self.temp1P_x[-1] = time
+            self.temp1I_x[-1] = time
+            self.temp1D_x[-1] = time
+            self.temp1U_x[-1] = time
+
+        print('Temperature 1',temp, self.temp1Count)
 
     def temperature2CB(self, temp):
-        print('Temperature 2',temp)
+        
+        self.temp2T = temp
+
+        if (self.temp2Count < self.maxnumberofpoints2):
+
+            time = self.temp2Count * self.temp2TA / 2000.0
+            self.temp2T_y[self.temp2Count] = self.temp2T
+            self.temp2P_y[self.temp2Count] = self.temp2P
+            self.temp2I_y[self.temp2Count] = self.temp2I
+            self.temp2D_y[self.temp2Count] = self.temp2D
+            self.temp2U_y[self.temp2Count] = self.temp2U
+
+            self.temp2T_x[self.temp2Count] = time
+            self.temp2P_x[self.temp2Count] = time
+            self.temp2I_x[self.temp2Count] = time
+            self.temp2D_x[self.temp2Count] = time
+            self.temp2U_x[self.temp2Count] = time
+            self.temp2Count = self.temp2Count + 2
+        else:
+
+            lasttime = self.temp2T_y[-2]
+            time = lasttime + self.temp2TA / 2000.0
+            self.temp2T_y = np.roll(self.temp2T_y, -1)
+            self.temp2P_y = np.roll(self.temp2P_y, -1)
+            self.temp2I_y = np.roll(self.temp2I_y, -1)
+            self.temp2D_y = np.roll(self.temp2D_y, -1)
+            self.temp2U_y = np.roll(self.temp2U_y, -1)
+
+            self.temp2T_x = np.roll(self.temp2T_x, -1)
+            self.temp2P_x = np.roll(self.temp2P_x, -1)
+            self.temp2I_x = np.roll(self.temp2I_x, -1)
+            self.temp2D_x = np.roll(self.temp2D_x, -1)
+            self.temp2U_x = np.roll(self.temp2U_x, -1)
+
+            self.temp2T_y[-1] = self.temp2T
+            self.temp2P_y[-1] = self.temp2P
+            self.temp2I_y[-1] = self.temp2I
+            self.temp2D_y[-1] = self.temp2D
+            self.temp2U_y[-1] = self.temp2U
+
+            self.temp2T_x[-1] = time
+            self.temp2P_x[-1] = time
+            self.temp2I_x[-1] = time
+            self.temp2D_x[-1] = time
+            self.temp2U_x[-1] = time
+
+        print('Temperature 2', temp, self.temp2Count)
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
