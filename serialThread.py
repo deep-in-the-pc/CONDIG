@@ -66,14 +66,19 @@ class serialThread (QThread):
         self.serialConnection.open()
         if(self.serialConnection.is_open):
             while not self.closeEvent.is_set():
-                if self.getTemperature1.is_set() and not self.temperature1_qtimer.isActive():
+                if self.getTemperature1.is_set() and not self.temperature1TimeSet:
+                    self.temperature1TimerSetup()
                     self.temperature1TimerStart()
-                if self.getTemperature2.is_set() and not self.temperature2_qtimer.isActive():
+                if self.getTemperature2.is_set() and not self.temperature2TimeSet:
+                    self.temperature2TimerSetup()
                     self.temperature2TimerStart()
-                if self.temperature1TimeSet:
+                if time.time() - self.temperature1_oldtime >= self.temperature1DeltaTime and self.temperature1TimeSet:
+                    self.temperature1_oldtime = time.time()
                     packet = bytearray()
                     packet.append(114)
-                    packet.append(14)
+                    packet.append(32)
+                    packet.append(ord('1'))
+                    packet.append(ord('5'))
                     packet.append(13)
                     self.serialConnection.write(packet)
                     val = self.serialConnection.read(2)
@@ -81,11 +86,13 @@ class serialThread (QThread):
                     temperature1 = (temp_volt - 500) * 0.1;
                     self.newTemperature1Signal.emit(temperature1)
 
-                    self.temperature1TimeSet = False
-                elif(self.temperature2TimeSet):
+                elif time.time() - self.temperature2_oldtime >= self.temperature2DeltaTime and self.temperature2TimeSet:
+                    self.temperature2_oldtime = time.time()
                     packet = bytearray()
                     packet.append(114)
-                    packet.append(15)
+                    packet.append(32)
+                    packet.append(ord('1'))
+                    packet.append(ord('4'))
                     packet.append(13)
                     self.serialConnection.write(packet)
                     val = self.serialConnection.read(2)
@@ -93,12 +100,16 @@ class serialThread (QThread):
                     temperature2 = (temp_volt - 500) * 0.1;
                     self.newTemperature2Signal.emit(temperature2)
 
-                    self.temperature2TimeSet = False
                 elif(self.setLed1.is_set()):
                     packet = bytearray()
                     packet.append(119)
-                    packet.append(5)
-                    packet.append(self.led1)
+                    packet.append(32)
+                    packet.append(ord('5'))
+                    packet.append(32)
+
+                    for char in str(self.led1):
+                        packet.append(ord(char))
+
                     packet.append(13)
                     self.serialConnection.write(packet)
 
@@ -106,8 +117,12 @@ class serialThread (QThread):
                 elif(self.setLed2.is_set()):
                     packet = bytearray()
                     packet.append(119)
-                    packet.append(6)
-                    packet.append(self.led2)
+                    packet.append(32)
+                    packet.append(ord('6'))
+                    packet.append(32)
+                    for char in str(self.led2):
+                        packet.append(ord(char))
+
                     packet.append(13)
                     self.serialConnection.write(packet)
 
@@ -115,8 +130,11 @@ class serialThread (QThread):
                 elif (self.setTransistor1.is_set()):
                     packet = bytearray()
                     packet.append(119)
-                    packet.append(9)
-                    packet.append(self.transistor1)
+                    packet.append(32)
+                    packet.append(ord('9'))
+                    packet.append(32)
+                    for char in str(self.transistor1):
+                        packet.append(ord(char))
                     packet.append(13)
                     self.serialConnection.write(packet)
 
@@ -124,8 +142,13 @@ class serialThread (QThread):
                 elif (self.setTransistor2.is_set()):
                     packet = bytearray()
                     packet.append(119)
-                    packet.append(10)
-                    packet.append(self.transistor2)
+                    packet.append(32)
+                    packet.append(ord('1'))
+                    packet.append(ord('0'))
+                    packet.append(32)
+                    for char in str(self.transistor2):
+                        packet.append(ord(char))
+
                     packet.append(13)
                     self.serialConnection.write(packet)
 
@@ -133,21 +156,14 @@ class serialThread (QThread):
         self.serialConnection.close()
 
     def temperature1TimerSetup(self):
-        self.temperature1_qtimer = QtCore.QTimer(self)
-        self.temperature1_qtimer.timeout.connect(self.temperature1TimerCB)
+        self.temperature1_oldtime = time.time()
 
-    def temperature2TimerStart(self):
-        self.temperature1_qtimer.start(self.temperature1DeltaTime)
+    def temperature1TimerStart(self):
 
-    def temperature2TimerSetup(self):
-        self.temperature2_qtimer = QtCore.QTimer(self)
-        self.temperature2_qtimer.timeout.connect(self.temperature2TimerCB)
-
-    def temperature2TimerStart(self):
-        self.temperature2_qtimer.start(self.temperature2DeltaTime)
-
-    def temperature1TimerCB(self):
         self.temperature1TimeSet = True
 
-    def temperature2TimerCB(self):
+    def temperature2TimerSetup(self):
+        self.temperature2_oldtime = time.time()
+
+    def temperature2TimerStart(self):
         self.temperature2TimeSet = True

@@ -76,8 +76,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         #temp2TAEdit Edited Callback
         self.ui.temp2TAEdit.textEdited.connect(self.temp2TAEditValidateCB)
-        #TODO add limit to stretch tool bar
-        #TODO plot data on 1 or 2 plots depending on amount to temperature sensor data received
         #TODO link serial event for receiving data to graph update
         #TODO add options to graph info area (start temperature get timer; set temperature#DeltaTime; set analogReference)
         #TODO search library for making transfer functions
@@ -118,6 +116,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.serialConnectionParameters.append(serial.PARITY_NONE)
         self.serialConnectionParameters.append(serial.STOPBITS_ONE)
         self.serialConnectionParameters.append(115200)
+
+        self.serialListenerThread.newTemperature1Signal.connect(self.temperature1CB)
+        self.serialListenerThread.newTemperature2Signal.connect(self.temperature2CB)
 
         self.serialListenerThread.closeEvent.set()
 
@@ -250,6 +251,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.serialThreadStop()
             self.ui.conectarButton.setText("Connect")
             self.ui.connectionLabel.setText("Conexão: Desligada")
+            self.ui.Controlo.setEnabled(False)
+            self.ui.frame.setEnabled(False)
+            self.ui.temp1TAEdit.setText('')
+            self.temp1TA = None
+            self.ui.temp2TAEdit.setText('')
+            self.temp2TA = None
         elif(self.serialCOM != None):
             self.serialListenerThread.closeEvent.clear()
             self.serialThreadStart()
@@ -257,15 +264,29 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.ui.connectionLabel.setText("Conexão: Ligado")
                 # If connection is established set text as disconnect
                 self.ui.conectarButton.setText("Disconnect")
+                self.ui.Controlo.setEnabled(True)
+                self.ui.frame.setEnabled(True)
+                self.ui.temp1TAEdit.setEnabled(True)
+                self.ui.temp2TAEdit.setEnabled(True)
+                self.ui.ref3v3RButton.setEnabled(True)
+                self.ui.ref5vButton.setEnabled(True)
 
+                self.ui.temp1TAEdit.setText('500')
+                self.temp1TA = 500
+                self.ui.temp2TAEdit.setText('500')
+                self.temp2TA = 500
     def t1EnviarCB(self):
         if self.is_connected:
             self.serialListenerThread.transistor1 = self.ui.t1SBox.value()
             self.serialListenerThread.setTransistor1.set()
+            self.serialListenerThread.temperature1DeltaTime = self.temp1TA/1000.0
+            self.serialListenerThread.getTemperature1.set()
     def t2EnviarCB(self):
         if self.is_connected:
             self.serialListenerThread.transistor2 = self.ui.t2SBox.value()
             self.serialListenerThread.setTransistor2.set()
+            self.serialListenerThread.temperature2DeltaTime = self.temp2TA/1000.0
+            self.serialListenerThread.getTemperature2.set()
     def l1EnviarCB(self):
         if self.is_connected:
             self.serialListenerThread.led1 = self.ui.l1SBox.value()
@@ -402,7 +423,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp2DcheckBox.setEnabled(False)
             self.ui.temp2UcheckBox.setEnabled(False)
 
+    def temperature1CB(self, temp):
+        print('Temperature 1',temp)
 
+    def temperature2CB(self, temp):
+        print('Temperature 2',temp)
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
