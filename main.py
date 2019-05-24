@@ -2,6 +2,7 @@
 
 
 from operator import itemgetter
+import time as t
 import sys
 import os
 import threading
@@ -48,6 +49,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.plotsObjects = []
         self.maxnumberofpoints1 = None
         self.maxnumberofpoints2 = None
+        self.graph1_isUpdating = False
+        self.graph2_isUpdating = False
 
         self.temp1T = 0
         self.temp1P = 0
@@ -73,6 +76,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.l1EnviarButton.clicked.connect(self.l1EnviarCB)
         #l2EnviarButton Callback
         self.ui.l2EnviarButton.clicked.connect(self.l2EnviarCB)
+        # temp1StartQButton Callback
+        self.ui.temp1StartQButton.clicked.connect(self.temp1StartQCB)
+        # temp1StartQButton Callback
+        self.ui.temp2StartQButton.clicked.connect(self.temp2StartQCB)
         #temp1TCheckBox Callback
         self.ui.temp1TcheckBox.stateChanged.connect(self.temp1TcheckboxCB)
         #temp1PIDUCheckBox Callback
@@ -158,7 +165,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def updateGUI(self):
         nplots = 0
         for n, plot in self.plots:
-            if n == 1:
+            if n == 1 and self.graph1_isUpdating:
                 for item in self.plotsObjects[nplots][0].listDataItems():
                     if item.name() == "Temperatura 1":
                         self.plotsObjects[nplots][0].removeItem(item)
@@ -166,7 +173,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.plotsObjects[nplots][1].removeItem('Temperatura 1')
                 self.plotsObjects[nplots][1].addItem(temp, 'Temperatura 1')
                 nplots = nplots + 1
-            elif n == 2:
+            elif n == 2 and self.graph1_isUpdating:
 
                 if 'P' in plot:
                     for item in self.plotsObjects[nplots][0].listDataItems():
@@ -203,7 +210,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
                 nplots = nplots + 1
 
-            elif n == 3:
+            elif n == 3 and self.graph2_isUpdating:
 
                 for item in self.plotsObjects[nplots][0].listDataItems():
                     if item.name() == "Temperatura 2":
@@ -213,7 +220,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.plotsObjects[nplots][1].addItem(temp, 'Temperatura 2')
                 nplots = nplots + 1
 
-            elif n == 4:
+            elif n == 4 and self.graph2_isUpdating:
 
                 if 'P' in plot:
                     for item in self.plotsObjects[nplots][0].listDataItems():
@@ -251,12 +258,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 nplots = nplots + 1
 
     def graphWindowSetup(self):
-
         self.ui.graphWindow.clear()
-
         self.plotsObjects = []
         self.plots.sort(key=itemgetter(0))
-
         nplots = 0
         for n, plot in self.plots:
             if n == 1:
@@ -373,6 +377,32 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         #             self.temp2U_x = np.zeros(self.maxnumberofpoints2)
         #             self.temp2U_y = np.zeros(self.maxnumberofpoints2)
 
+    def startGraph1Update(self):
+        self.serialListenerThread.temperature1DeltaTime = self.temp1TA/1000.0
+        self.serialListenerThread.getTemperature1.set()
+        self.maxnumberofpoints1 = round(300 * (1000.0 / self.temp1TA))
+        self.graphArraysSetup(1)
+        if not self.guiupdate_qtimer.isActive():
+            self.guiupdate_qtimer.start(self.guiupdate_qtimer_interval)
+
+    def stopGraph1Update(self):
+        self.serialListenerThread.getTemperature1.clear()
+        if not self.graph1_isUpdating and not self.graph2_isUpdating:
+            self.guiupdate_qtimer.stop()
+
+    def startGraph2Update(self):
+        self.serialListenerThread.temperature2DeltaTime = self.temp2TA / 1000.0
+        self.serialListenerThread.getTemperature2.set()
+        self.maxnumberofpoints2 = round(300 * (1000.0 / self.temp2TA))
+        self.graphArraysSetup(2)
+        if not self.guiupdate_qtimer.isActive():
+            self.guiupdate_qtimer.start(self.guiupdate_qtimer_interval)
+
+    def stopGraph2Update(self):
+        self.serialListenerThread.getTemperature2.clear()
+        if not self.graph1_isUpdating and not self.graph2_isUpdating:
+            self.guiupdate_qtimer.stop()
+
     #Callbacks
 
     def connectCB(self):
@@ -420,32 +450,23 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.temp1U = self.ui.t1SBox.value()
             self.serialListenerThread.transistor1 = self.temp1U
             self.serialListenerThread.setTransistor1.set()
-            self.serialListenerThread.temperature1DeltaTime = self.temp1TA/1000.0
-            self.serialListenerThread.getTemperature1.set()
-            self.maxnumberofpoints1 = round(300 * (1000.0 / self.temp1TA))
-            self.graphArraysSetup(1)
-        if not self.guiupdate_qtimer.isActive():
-            self.guiupdate_qtimer.start(self.guiupdate_qtimer_interval)
+
     def t2EnviarCB(self):
         if self.is_connected:
-            self.temp1U = self.ui.t2SBox.value()
-            self.serialListenerThread.transistor2 = self.temp1U
+            self.temp2U = self.ui.t2SBox.value()
+            self.serialListenerThread.transistor2 = self.temp2U
             self.serialListenerThread.setTransistor2.set()
-            self.serialListenerThread.temperature2DeltaTime = self.temp2TA/1000.0
-            self.serialListenerThread.getTemperature2.set()
 
-            self.maxnumberofpoints2 = round(300 * (1000.0 / self.temp2TA))
-            self.graphArraysSetup(2)
-        if not self.guiupdate_qtimer.isActive():
-            self.guiupdate_qtimer.start(self.guiupdate_qtimer_interval)
     def l1EnviarCB(self):
         if self.is_connected:
             self.serialListenerThread.led1 = self.ui.l1SBox.value()
             self.serialListenerThread.setLed1.set()
+
     def l2EnviarCB(self):
         if self.is_connected:
             self.serialListenerThread.led2 = self.ui.l2SBox.value()
             self.serialListenerThread.setLed2.set()
+
     def temp1TcheckboxCB(self, state):
 
         if state==2:
@@ -453,7 +474,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if(state==0):
             self.plots.remove((1, 'temp1T'))
 
-        self.graphArraysSetup(1)
+        #self.graphArraysSetup(1)
         self.graphWindowSetup()
 
     def temp1PIDUcheckboxCB(self, state):
@@ -475,7 +496,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if not txt == "temp1":
             self.plots.append((2, txt))
 
-        self.graphArraysSetup(1)
+        #self.graphArraysSetup(1)
         self.graphWindowSetup()
 
     def temp2TcheckboxCB(self, state):
@@ -484,7 +505,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if(state==0):
             self.plots.remove((3, 'temp2T'))
 
-        self.graphArraysSetup(2)
+        #self.graphArraysSetup(2)
         self.graphWindowSetup()
 
     def temp2PIDUcheckboxCB(self, state):
@@ -506,7 +527,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if not txt == "temp2":
             self.plots.append((4, txt))
 
-        self.graphArraysSetup(2)
+        #self.graphArraysSetup(2)
         self.graphWindowSetup()
 
     def temp1TAEditValidateCB(self):
@@ -598,7 +619,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.temp1Count = self.temp1Count + 1
         else:
 
-            lasttime = self.temp1T_y[-1]
+            lasttime = self.temp1T_x[-1]
             time = lasttime + self.temp1TA / 1000.0
             self.temp1T_y = np.roll(self.temp1T_y, -1)
             self.temp1P_y = np.roll(self.temp1P_y, -1)
@@ -624,15 +645,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.temp1D_x[-1] = time
             self.temp1U_x[-1] = time
 
-        print('Temperature 1',temp, self.temp1Count)
-
     def temperature2CB(self, temp):
         
         self.temp2T = temp
 
         if (self.temp2Count < self.maxnumberofpoints2):
 
-            time = self.temp2Count * self.temp2TA / 2000.0
+            time = self.temp2Count * self.temp2TA / 1000.0
             self.temp2T_y[self.temp2Count] = self.temp2T
             self.temp2P_y[self.temp2Count] = self.temp2P
             self.temp2I_y[self.temp2Count] = self.temp2I
@@ -644,11 +663,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.temp2I_x[self.temp2Count] = time
             self.temp2D_x[self.temp2Count] = time
             self.temp2U_x[self.temp2Count] = time
-            self.temp2Count = self.temp2Count + 2
+            self.temp2Count = self.temp2Count + 1
         else:
 
-            lasttime = self.temp2T_y[-2]
-            time = lasttime + self.temp2TA / 2000.0
+            lasttime = self.temp2T_x[-1]
+            time = lasttime + self.temp2TA / 1000.0
             self.temp2T_y = np.roll(self.temp2T_y, -1)
             self.temp2P_y = np.roll(self.temp2P_y, -1)
             self.temp2I_y = np.roll(self.temp2I_y, -1)
@@ -673,7 +692,26 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.temp2D_x[-1] = time
             self.temp2U_x[-1] = time
 
-        print('Temperature 2', temp, self.temp2Count)
+    def temp1StartQCB(self):
+        if self.graph1_isUpdating:
+            self.graph1_isUpdating = False
+            self.ui.temp1StartQButton.setText("Começar")
+            self.stopGraph1Update()
+        else:
+            self.graph1_isUpdating = True
+            self.ui.temp1StartQButton.setText("Parar")
+            self.startGraph1Update()
+
+
+    def temp2StartQCB(self):
+        if self.graph2_isUpdating:
+            self.graph2_isUpdating = False
+            self.ui.temp2StartQButton.setText("Começar")
+            self.stopGraph2Update()
+        else:
+            self.graph2_isUpdating = True
+            self.ui.temp2StartQButton.setText("Parar")
+            self.startGraph2Update()
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
