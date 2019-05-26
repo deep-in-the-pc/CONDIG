@@ -32,8 +32,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.initSetup()
 
-        #TODO store model in file
-        #TODO Load models on startup
         #TODO implement on-off control
         #TODO implement histerese control
         #TODO implement PID control
@@ -49,6 +47,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         # Variables
         self.setupVariables()
+
+        self.loadModelos()
+
+        #update model list
+        self.updateModelListView()
 
         # CallBacks
         self.setupCallbacks()
@@ -66,7 +69,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.modelo1TauSD = None
         self.modelo1TauCD = None
         self.modelo1Delay = None
-        
+        self.ssReady1 = False
+        self.ssReady1Clicked = False
+
         self.isCreatingModel2 = False
         self.modelo2Temp0 = None
         self.modelo2TempSS = None
@@ -75,6 +80,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.modelo2TauSD = None
         self.modelo2TauCD = None
         self.modelo2Delay = None
+        self.ssReady2 = False
+        self.ssReady2Clicked = False
 
         #Graph
         self.temp1TA = None
@@ -150,7 +157,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.ref3v3RButton.clicked.connect(self.switchADRef)
         #ref5vButton Callback
         self.ui.ref5vButton.clicked.connect(self.switchADRef)
-
+        #Controlo tabChange Callback
+        self.ui.Controlo.currentChanged.connect(self.currentChangedControloCB)
+        #modelListWidget line selected Callback
+        self.ui.modelListWidget.itemClicked.connect(self.modelListWidgetICCB)
     #Communication
 
     def getCOMList(self):
@@ -206,7 +216,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     #Modelos
 
     def createModel1(self):
-        if self.is_connected:
+        if self.is_connected and not self.ssReady1:
 
             #disable all other transistor 1 related functions
             self.ui.t1CriarModeloButton.setEnabled(False)
@@ -234,6 +244,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp1StartQButton.setText("Parar")
             self.startGraph1Update()
 
+        elif self.ssReady1:
+            self.ssReady1Clicked = True
+
     def finishModel1(self, tss):
 
         self.isCreatingModel1 = False
@@ -242,16 +255,18 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         self.graph1_isUpdating = False
         self.ui.temp1StartQButton.setText("Começar")
+        self.ssReady1 = False
+        self.ui.t1CriarModeloButton.setText("Criar Modelo")
         self.stopGraph1Update()
 
-        self.modelo1Temp0 = self.temp1T_y[0]
-        self.modelo1TempSS = tss
-        self.modelo1DeltaTemp = self.modelo1TempSS - self.modelo1Temp0
-        self.modelo1K = self.modelo1DeltaTemp / (self.temp1U/255.0)
+        self.modelo1Temp0 = round(self.temp1T_y[0],3)
+        self.modelo1TempSS = round(tss,3)
+        self.modelo1DeltaTemp = round(self.modelo1TempSS - self.modelo1Temp0,3)
+        self.modelo1K = round(self.modelo1DeltaTemp / (self.temp1U/255.0),3)
 
         index = np.where(self.temp1T_y >= (self.modelo1DeltaTemp*0.632)+self.modelo1Temp0)[0]
 
-        self.modelo1TauSD = self.temp1T_x[index[0]]
+        self.modelo1TauSD = round(self.temp1T_x[index[0]],3)
 
         t1index = np.where(self.temp1T_y >= (self.modelo1DeltaTemp*0.283)+self.modelo1Temp0)[0]
         t1 = self.temp1T_x[t1index[0]]
@@ -259,8 +274,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         t2 = self.temp1T_x[t2index[0]]
 
 
-        self.modelo1TauCD = (3.0/2.0)*(t2-t1)
-        self.modelo1Delay = t2 - self.modelo1TauCD
+        self.modelo1TauCD = (round(3.0/2.0)*(t2-t1),3)
+        self.modelo1Delay = round(t2 - self.modelo1TauCD,3)
+
+        #Store model
+        modelName = str(round(self.modelo1Temp0,2))+"-"+str(round(100*self.temp1U/255.0,2))
+        self.ModelList["1"][modelName] = {'T0':self.modelo1Temp0, 'TSS':self.modelo1TempSS, 'DeltaTemp':self.modelo1DeltaTemp, 'K':self.modelo1K, 'TauSD':self.modelo1TauSD, 'TauCD':self.modelo1TauCD, 'Delay':self.modelo1Delay}
+        self.saveModelo()
 
         txt = "T0: "+str(self.modelo1Temp0)+"\nTss: "+str(self.modelo1TempSS)+"\n\u0394T: "+str(self.modelo1DeltaTemp)+"\n K: "+str(self.modelo1K)+"\n\nModelo sem delay:\n\n\u03C4: "+str(self.modelo1TauSD)+"\n\nModelo com delay:\n\n\u03C4: "+str(self.modelo1TauCD)+"\n \u03C4D: "+str(self.modelo1Delay)
         self.ui.t1ModelTBrowser.setText(txt)
@@ -280,7 +300,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.temp1UcheckBox.setEnabled(True)
     
     def createModel2(self):
-        if self.is_connected:
+        if self.is_connected and not self.ssReady2:
 
             #disable all other transistor 2 related functions
             self.ui.t2CriarModeloButton.setEnabled(False)
@@ -308,6 +328,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp2StartQButton.setText("Parar")
             self.startGraph2Update()
 
+        elif self.ssReady2:
+            self.ssReady2Clicked = True
+
     def finishModel2(self, tss):
 
         self.isCreatingModel2 = False
@@ -316,25 +339,32 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         self.graph2_isUpdating = False
         self.ui.temp2StartQButton.setText("Começar")
+        self.ssReady2 = False
+        self.ui.t2CriarModeloButton.setText("Criar Modelo")
         self.stopGraph2Update()
 
-        self.modelo2Temp0 = self.temp2T_y[0]
-        self.modelo2TempSS = tss
-        self.modelo2DeltaTemp = self.modelo2TempSS - self.modelo2Temp0
-        self.modelo2K = self.modelo2DeltaTemp / (self.temp2U/255.0)
+        self.modelo2Temp0 = round(self.temp2T_y[0],3)
+        self.modelo2TempSS = round(tss,3)
+        self.modelo2DeltaTemp = round(self.modelo2TempSS - self.modelo2Temp0,3)
+        self.modelo2K = round(self.modelo2DeltaTemp / (self.temp2U/255.0),3)
 
         index = np.where(self.temp2T_y >= (self.modelo2DeltaTemp*0.632)+self.modelo2Temp0)[0]
 
-        self.modelo2TauSD = self.temp2T_x[index[0]]
+        self.modelo2TauSD = round(self.temp2T_x[index[0]],3)
 
-        t2index = np.where(self.temp2T_y >= (self.modelo2DeltaTemp*0.283)+self.modelo2Temp0)[0]
-        t1 = self.temp2T_x[t2index[0]]
+        t1index = np.where(self.temp2T_y >= (self.modelo2DeltaTemp*0.283)+self.modelo2Temp0)[0]
+        t1 = self.temp2T_x[t1index[0]]
         t2index = np.where(self.temp2T_y >= (self.modelo2DeltaTemp*0.632)+self.modelo2Temp0)[0]
         t2 = self.temp2T_x[t2index[0]]
 
 
-        self.modelo2TauCD = (3.0/2.0)*(t2-t1)
-        self.modelo2Delay = t2 - self.modelo2TauCD
+        self.modelo2TauCD = round((3.0/2.0)*(t2-t1),3)
+        self.modelo2Delay = round(t2 - self.modelo2TauCD,3)
+
+        #Store model
+        modelName = str(round(self.modelo2Temp0,2))+"-"+str(round(100*self.temp2U/255.0,2))
+        self.ModelList["2"][modelName] = {'T0':self.modelo2Temp0, 'TSS':self.modelo2TempSS, 'DeltaTemp':self.modelo2DeltaTemp, 'K':self.modelo2K, 'TauSD':self.modelo2TauSD, 'TauCD':self.modelo2TauCD, 'Delay':self.modelo2Delay}
+        self.saveModelo()
 
         txt = "T0: "+str(self.modelo2Temp0)+"\nTss: "+str(self.modelo2TempSS)+"\n\u0394T: "+str(self.modelo2DeltaTemp)+"\n K: "+str(self.modelo2K)+"\n\nModelo sem delay:\n\n\u03C4: "+str(self.modelo2TauSD)+"\n\nModelo com delay:\n\n\u03C4: "+str(self.modelo2TauCD)+"\n \u03C4D: "+str(self.modelo2Delay)
         self.ui.t2ModelTBrowser.setText(txt)
@@ -353,8 +383,50 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.temp2DcheckBox.setEnabled(True)
         self.ui.temp2UcheckBox.setEnabled(True)
 
+    def enableSteadyStateReady1(self):
+        self.ssReady1 = True
+        self.ui.t1CriarModeloButton.setEnabled(True)
+        self.ui.t1CriarModeloButton.setText("Terminar Modelo")
 
+    def enableSteadyStateReady2(self):
+        self.ssReady2 = True
+        self.ui.t2CriarModeloButton.setEnabled(True)
+        self.ui.t2CriarModeloButton.setText("Terminar Modelo")
 
+    def saveModelo(self):
+        with open("modelos.json", 'w') as outfile:
+            json.dump(self.ModelList, outfile, indent=4)
+
+    def loadModelos(self):
+        try:
+            with open("modelos.json") as json_file:
+                self.ModelList = json.load(json_file)
+        except Exception:
+            self.ModelList = {"1":{}, "2":{}}
+
+    def updateModelListView(self):
+
+        self.ui.modelListWidget.clear()
+
+        for modelo in self.ModelList["1"]:
+            parameters = self.ModelList["1"][modelo]
+
+            dataListParam = parameters["T0"], parameters["TSS"], parameters["DeltaTemp"], parameters["K"], parameters["TauSD"], parameters["TauCD"], parameters["Delay"],
+
+            listEntry = QtWidgets.QListWidgetItem()
+            listEntry.setText("Transistor 1 - " + modelo.split('-')[0] + ' - '  +modelo.split('-')[1] + '%')
+            listEntry.setData(32, dataListParam)
+            self.ui.modelListWidget.addItem(listEntry)
+
+        for modelo in self.ModelList["2"]:
+            parameters = self.ModelList["2"][modelo]
+
+            dataListParam = parameters["T0"], parameters["TSS"], parameters["DeltaTemp"], parameters["K"], parameters["TauSD"], parameters["TauCD"], parameters["Delay"],
+
+            listEntry = QtWidgets.QListWidgetItem()
+            listEntry.setText("Transistor 2 - " + modelo.split('-')[0] + ' - '  +modelo.split('-')[1] + '%')
+            listEntry.setData(32, dataListParam)
+            self.ui.modelListWidget.addItem(listEntry)
     #Graph
 
     def updateGUI(self):
@@ -551,7 +623,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.temp2T_y = np.zeros(round(1200 * (1000.0 / self.temp2TA)))
             print("size 2:", self.temp2T_x.size)
 
-
     def startGraph1Update(self):
         self.serialListenerThread.temperature1DeltaTime = self.temp1TA/1000.0
         self.serialListenerThread.getTemperature1.set()
@@ -603,6 +674,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.serialListenerThread.closeEvent.clear()
             self.serialThreadStart()
             if(self.serialListenerThread.isRunning()):
+                self.ui.Controlo.setCurrentIndex(0)
                 self.ui.connectionLabel.setText("Conexão: Ligado")
                 # If connection is established set text as disconnect
                 self.ui.conectarButton.setText("Disconnect")
@@ -841,13 +913,17 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 ns = round(30*(1000.0/self.temp1TA))
                 avrg = sum(self.temp1T_y[self.temp1Count-ns:self.temp1Count])/ns
                 avrgerror = sum(abs(self.temp1T_y[self.temp1Count-ns:self.temp1Count] - avrg)) / ns
-                print(self.temp1Count, avrgerror)
-                if avrgerror < 0.02: # certeza superior a 99.98%
+                print("Modelo 1:", self.temp1Count, avrgerror)
+                if avrgerror < 0.3 and not self.ssReady1: #permitir ao utilizado terminar o modelo manualmente
+                    self.enableSteadyStateReady1()
+                if avrgerror < 0.02 or self.ssReady1Clicked: # certeza superior a 99.98%
+                    self.ssReady1Clicked = False
                     self.finishModel1(avrg)
-
+                    return
             self.temp1Count = self.temp1Count + 1
             if self.temp1Count == round(1200 * (1000.0 / self.temp1TA)):
                 self.finishModel1(avrg)
+                return
 
     def temperature2CB(self, temp):
         
@@ -907,12 +983,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 avrg = sum(self.temp2T_y[self.temp2Count-ns:self.temp2Count])/ns
                 avrgerror = sum(abs(self.temp2T_y[self.temp2Count-ns:self.temp2Count] - avrg)) / ns
                 print("Modelo 2:",self.temp2Count, avrgerror)
-                if avrgerror < 0.02: # certeza superior a 99.98%
+                if avrgerror < 0.02 or self.ssReady2Clicked: # certeza superior a 99.98%
                     self.finishModel2(avrg)
-
+                    return
+                if avrgerror < 0.3 and not self.ssReady2: #permitir ao utilizado terminar o modelo manualmente
+                    self.enableSteadyStateReady2()
             self.temp2Count = self.temp2Count + 1
             if self.temp2Count == round(1200 * (1000.0 / self.temp2TA)):
                 self.finishModel2(avrg)
+                return
 
     def temp1StartQCB(self):
         if self.graph1_isUpdating:
@@ -937,6 +1016,17 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def switchADRef(self):
         if self.is_connected:
             self.serialListenerThread.swithADREF.set()
+
+    def currentChangedControloCB(self, index):
+        if not self.is_connected:
+            self.ui.Controlo.setCurrentIndex(5)
+
+    def modelListWidgetICCB(self, item):
+        Temp0, TempSS, DeltaTemp, K, TauSD, TauCD, Delay = item.data(32)
+
+        txt = "T0: "+str(Temp0)+"\nTss: "+str(TempSS)+"\n\u0394T: "+str(DeltaTemp)+"\n K: "+str(K)+"\n\nModelo sem delay:\n\n\u03C4: "+str(TauSD)+"\n\nModelo com delay:\n\n\u03C4: "+str(TauCD)+"\n \u03C4D: "+str(Delay)
+        self.ui.modelosTextBrowser.setText(txt)
+
 def main():
     app = QtWidgets.QApplication(sys.argv)
     application = ApplicationWindow()
