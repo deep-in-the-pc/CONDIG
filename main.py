@@ -59,6 +59,22 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         #Model
         self.isCreatingModel1 = False
+        self.modelo1Temp0 = None
+        self.modelo1TempSS = None
+        self.modelo1DeltaTemp = None
+        self.modelo1K = None
+        self.modelo1TauSD = None
+        self.modelo1TauCD = None
+        self.modelo1Delay = None
+        
+        self.isCreatingModel2 = False
+        self.modelo2Temp0 = None
+        self.modelo2TempSS = None
+        self.modelo2DeltaTemp = None
+        self.modelo2K = None
+        self.modelo2TauSD = None
+        self.modelo2TauCD = None
+        self.modelo2Delay = None
 
         #Graph
         self.temp1TA = None
@@ -128,10 +144,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.temp2TAEdit.textEdited.connect(self.temp2TAEditValidateCB)
         #t1CriarModeloButton Callback
         self.ui.t1CriarModeloButton.clicked.connect(self.createModel1)
+        #t2CriarModeloButton Callback
+        self.ui.t2CriarModeloButton.clicked.connect(self.createModel2)
         #ref3v3RButton Callback
         self.ui.ref3v3RButton.clicked.connect(self.switchADRef)
         #ref5vButton Callback
         self.ui.ref5vButton.clicked.connect(self.switchADRef)
+
     #Communication
 
     def getCOMList(self):
@@ -259,6 +278,83 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.temp1IcheckBox.setEnabled(True)
         self.ui.temp1DcheckBox.setEnabled(True)
         self.ui.temp1UcheckBox.setEnabled(True)
+    
+    def createModel2(self):
+        if self.is_connected:
+
+            #disable all other transistor 2 related functions
+            self.ui.t2CriarModeloButton.setEnabled(False)
+            self.ui.t2EnviarButton.setEnabled(False)
+            self.ui.t2SBox.setEnabled(False)
+            self.ui.temp2StartQButton.setEnabled(False)
+            self.ui.temp2TAEdit.setEnabled(False)
+            self.ui.ooT2StartButton.setEnabled(False)
+            self.ui.hstT2StartButton.setEnabled(False)
+            self.ui.pidT2StartButton.setEnabled(False)
+            self.ui.t2CalibrateButton.setEnabled(False)
+            self.ui.temp2PcheckBox.setEnabled(False)
+            self.ui.temp2IcheckBox.setEnabled(False)
+            self.ui.temp2DcheckBox.setEnabled(False)
+            self.ui.temp2UcheckBox.setEnabled(False)
+            self.isCreatingModel2 = True
+
+            #Send Input
+            self.temp2U = self.ui.t2SBox.value()
+            self.serialListenerThread.transistor2 = self.temp2U
+            self.serialListenerThread.setTransistor2.set()
+
+            #Receber Dados
+            self.graph2_isUpdating = True
+            self.ui.temp2StartQButton.setText("Parar")
+            self.startGraph2Update()
+
+    def finishModel2(self, tss):
+
+        self.isCreatingModel2 = False
+        self.serialListenerThread.transistor2 = 0
+        self.serialListenerThread.setTransistor2.set()
+
+        self.graph2_isUpdating = False
+        self.ui.temp2StartQButton.setText("Começar")
+        self.stopGraph2Update()
+
+        self.modelo2Temp0 = self.temp2T_y[0]
+        self.modelo2TempSS = tss
+        self.modelo2DeltaTemp = self.modelo2TempSS - self.modelo2Temp0
+        self.modelo2K = self.modelo2DeltaTemp / (self.temp2U/255.0)
+
+        index = np.where(self.temp2T_y >= (self.modelo2DeltaTemp*0.632)+self.modelo2Temp0)[0]
+
+        self.modelo2TauSD = self.temp2T_x[index[0]]
+
+        t2index = np.where(self.temp2T_y >= (self.modelo2DeltaTemp*0.283)+self.modelo2Temp0)[0]
+        t1 = self.temp2T_x[t2index[0]]
+        t2index = np.where(self.temp2T_y >= (self.modelo2DeltaTemp*0.632)+self.modelo2Temp0)[0]
+        t2 = self.temp2T_x[t2index[0]]
+
+
+        self.modelo2TauCD = (3.0/2.0)*(t2-t1)
+        self.modelo2Delay = t2 - self.modelo2TauCD
+
+        txt = "T0: "+str(self.modelo2Temp0)+"\nTss: "+str(self.modelo2TempSS)+"\n\u0394T: "+str(self.modelo2DeltaTemp)+"\n K: "+str(self.modelo2K)+"\n\nModelo sem delay:\n\n\u03C4: "+str(self.modelo2TauSD)+"\n\nModelo com delay:\n\n\u03C4: "+str(self.modelo2TauCD)+"\n \u03C4D: "+str(self.modelo2Delay)
+        self.ui.t2ModelTBrowser.setText(txt)
+
+        self.ui.t2CriarModeloButton.setEnabled(True)
+        self.ui.t2EnviarButton.setEnabled(True)
+        self.ui.t2SBox.setEnabled(True)
+        self.ui.temp2StartQButton.setEnabled(True)
+        self.ui.temp2TAEdit.setEnabled(True)
+        self.ui.ooT2StartButton.setEnabled(True)
+        self.ui.hstT2StartButton.setEnabled(True)
+        self.ui.pidT2StartButton.setEnabled(True)
+        self.ui.t2CalibrateButton.setEnabled(True)
+        self.ui.temp2PcheckBox.setEnabled(True)
+        self.ui.temp2IcheckBox.setEnabled(True)
+        self.ui.temp2DcheckBox.setEnabled(True)
+        self.ui.temp2UcheckBox.setEnabled(True)
+
+
+
     #Graph
 
     def updateGUI(self):
@@ -418,8 +514,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 nplots = nplots + 1
 
     def graphArraysSetup(self, plot):
-        if not self.isCreatingModel1: #or self.isCreatingModel2:
-            if plot == 1:
+        if plot == 1:
+            if not self.isCreatingModel1:
                 self.temp1Count = 0
                 self.temp1T_x = np.zeros(self.maxnumberofpoints1)
                 self.temp1T_y = np.zeros(self.maxnumberofpoints1)
@@ -431,7 +527,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.temp1D_y = np.zeros(self.maxnumberofpoints1)
                 self.temp1U_x = np.zeros(self.maxnumberofpoints1)
                 self.temp1U_y = np.zeros(self.maxnumberofpoints1)
-            if plot == 2:
+            else:
+                self.temp1Count = 0
+                self.temp1T_x = np.zeros(round(1200 * (1000.0 / self.temp1TA)))
+                self.temp1T_y = np.zeros(round(1200 * (1000.0 / self.temp1TA)))
+            print("size 1:", self.temp1T_x.size)
+        elif plot == 2:
+            if not self.isCreatingModel2:
                 self.temp2Count = 0
                 self.temp2T_x = np.zeros(self.maxnumberofpoints2)
                 self.temp2T_y = np.zeros(self.maxnumberofpoints2)
@@ -443,10 +545,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.temp2D_y = np.zeros(self.maxnumberofpoints2)
                 self.temp2U_x = np.zeros(self.maxnumberofpoints2)
                 self.temp2U_y = np.zeros(self.maxnumberofpoints2)
-        elif self.isCreatingModel1:
-            self.temp1Count = 0
-            self.temp1T_x = np.zeros(round(1200 * (1000.0 / self.temp1TA)))
-            self.temp1T_y = np.zeros(round(1200 * (1000.0 / self.temp1TA)))
+            else:
+                self.temp2Count = 0
+                self.temp2T_x = np.zeros(round(1200 * (1000.0 / self.temp2TA)))
+                self.temp2T_y = np.zeros(round(1200 * (1000.0 / self.temp2TA)))
+            print("size 2:", self.temp2T_x.size)
+
 
     def startGraph1Update(self):
         self.serialListenerThread.temperature1DeltaTime = self.temp1TA/1000.0
@@ -457,7 +561,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.ref3v3RButton.setEnabled(False)
             self.ui.ref5vButton.setEnabled(False)
             self.guiupdate_qtimer.start(self.guiupdate_qtimer_interval)
-
 
     def stopGraph1Update(self):
         self.serialListenerThread.getTemperature1.clear()
@@ -476,13 +579,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.ref5vButton.setEnabled(False)
             self.guiupdate_qtimer.start(self.guiupdate_qtimer_interval)
 
-
     def stopGraph2Update(self):
         self.serialListenerThread.getTemperature2.clear()
         if not self.graph1_isUpdating and not self.graph2_isUpdating:
             self.guiupdate_qtimer.stop()
             self.ui.ref3v3RButton.setEnabled(True)
             self.ui.ref5vButton.setEnabled(True)
+            
     #Callbacks
 
     def connectCB(self):
@@ -682,7 +785,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def temperature1CB(self, temp):
         self.temp1T = temp
 
-        if not self.isCreatingModel1:# or self.isCreatingModel2:
+        if not self.isCreatingModel1:
 
             if (self.temp1Count < self.maxnumberofpoints1):
 
@@ -749,49 +852,67 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def temperature2CB(self, temp):
         
         self.temp2T = temp
+        if not self.isCreatingModel2:
+            if (self.temp2Count < self.maxnumberofpoints2):
 
-        if (self.temp2Count < self.maxnumberofpoints2):
+                time = self.temp2Count * self.temp2TA / 1000.0
+                self.temp2T_y[self.temp2Count] = self.temp2T
+                self.temp2P_y[self.temp2Count] = self.temp2P
+                self.temp2I_y[self.temp2Count] = self.temp2I
+                self.temp2D_y[self.temp2Count] = self.temp2D
+                self.temp2U_y[self.temp2Count] = self.temp2U
 
+                self.temp2T_x[self.temp2Count] = time
+                self.temp2P_x[self.temp2Count] = time
+                self.temp2I_x[self.temp2Count] = time
+                self.temp2D_x[self.temp2Count] = time
+                self.temp2U_x[self.temp2Count] = time
+                self.temp2Count = self.temp2Count + 1
+            else:
+
+                lasttime = self.temp2T_x[-1]
+                time = lasttime + self.temp2TA / 1000.0
+                self.temp2T_y = np.roll(self.temp2T_y, -1)
+                self.temp2P_y = np.roll(self.temp2P_y, -1)
+                self.temp2I_y = np.roll(self.temp2I_y, -1)
+                self.temp2D_y = np.roll(self.temp2D_y, -1)
+                self.temp2U_y = np.roll(self.temp2U_y, -1)
+
+                self.temp2T_x = np.roll(self.temp2T_x, -1)
+                self.temp2P_x = np.roll(self.temp2P_x, -1)
+                self.temp2I_x = np.roll(self.temp2I_x, -1)
+                self.temp2D_x = np.roll(self.temp2D_x, -1)
+                self.temp2U_x = np.roll(self.temp2U_x, -1)
+
+                self.temp2T_y[-1] = self.temp2T
+                self.temp2P_y[-1] = self.temp2P
+                self.temp2I_y[-1] = self.temp2I
+                self.temp2D_y[-1] = self.temp2D
+                self.temp2U_y[-1] = self.temp2U
+
+                self.temp2T_x[-1] = time
+                self.temp2P_x[-1] = time
+                self.temp2I_x[-1] = time
+                self.temp2D_x[-1] = time
+                self.temp2U_x[-1] = time
+        elif self.isCreatingModel2:
             time = self.temp2Count * self.temp2TA / 1000.0
             self.temp2T_y[self.temp2Count] = self.temp2T
-            self.temp2P_y[self.temp2Count] = self.temp2P
-            self.temp2I_y[self.temp2Count] = self.temp2I
-            self.temp2D_y[self.temp2Count] = self.temp2D
-            self.temp2U_y[self.temp2Count] = self.temp2U
-
             self.temp2T_x[self.temp2Count] = time
-            self.temp2P_x[self.temp2Count] = time
-            self.temp2I_x[self.temp2Count] = time
-            self.temp2D_x[self.temp2Count] = time
-            self.temp2U_x[self.temp2Count] = time
+
+
+            #Check if last 30 seconds are stable
+            if self.temp2T_x[self.temp2Count] > 30:
+                ns = round(30*(1000.0/self.temp2TA))
+                avrg = sum(self.temp2T_y[self.temp2Count-ns:self.temp2Count])/ns
+                avrgerror = sum(abs(self.temp2T_y[self.temp2Count-ns:self.temp2Count] - avrg)) / ns
+                print("Modelo 2:",self.temp2Count, avrgerror)
+                if avrgerror < 0.02: # certeza superior a 99.98%
+                    self.finishModel2(avrg)
+
             self.temp2Count = self.temp2Count + 1
-        else:
-
-            lasttime = self.temp2T_x[-1]
-            time = lasttime + self.temp2TA / 1000.0
-            self.temp2T_y = np.roll(self.temp2T_y, -1)
-            self.temp2P_y = np.roll(self.temp2P_y, -1)
-            self.temp2I_y = np.roll(self.temp2I_y, -1)
-            self.temp2D_y = np.roll(self.temp2D_y, -1)
-            self.temp2U_y = np.roll(self.temp2U_y, -1)
-
-            self.temp2T_x = np.roll(self.temp2T_x, -1)
-            self.temp2P_x = np.roll(self.temp2P_x, -1)
-            self.temp2I_x = np.roll(self.temp2I_x, -1)
-            self.temp2D_x = np.roll(self.temp2D_x, -1)
-            self.temp2U_x = np.roll(self.temp2U_x, -1)
-
-            self.temp2T_y[-1] = self.temp2T
-            self.temp2P_y[-1] = self.temp2P
-            self.temp2I_y[-1] = self.temp2I
-            self.temp2D_y[-1] = self.temp2D
-            self.temp2U_y[-1] = self.temp2U
-
-            self.temp2T_x[-1] = time
-            self.temp2P_x[-1] = time
-            self.temp2I_x[-1] = time
-            self.temp2D_x[-1] = time
-            self.temp2U_x[-1] = time
+            if self.temp2Count == round(1200 * (1000.0 / self.temp2TA)):
+                self.finishModel2(avrg)
 
     def temp1StartQCB(self):
         if self.graph1_isUpdating:
