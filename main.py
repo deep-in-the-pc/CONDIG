@@ -274,13 +274,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         t2 = self.temp1T_x[t2index[0]]
 
 
-        self.modelo1TauCD = (round(3.0/2.0)*(t2-t1),3)
+        self.modelo1TauCD = round((3.0/2.0)*(t2-t1),3)
         self.modelo1Delay = round(t2 - self.modelo1TauCD,3)
 
         #Store model
         modelName = str(round(self.modelo1Temp0,2))+"-"+str(round(100*self.temp1U/255.0,2))
         self.ModelList["1"][modelName] = {'T0':self.modelo1Temp0, 'TSS':self.modelo1TempSS, 'DeltaTemp':self.modelo1DeltaTemp, 'K':self.modelo1K, 'TauSD':self.modelo1TauSD, 'TauCD':self.modelo1TauCD, 'Delay':self.modelo1Delay}
         self.saveModelo()
+
+        self.updateModelListView()
 
         txt = "T0: "+str(self.modelo1Temp0)+"\nTss: "+str(self.modelo1TempSS)+"\n\u0394T: "+str(self.modelo1DeltaTemp)+"\n K: "+str(self.modelo1K)+"\n\nModelo sem delay:\n\n\u03C4: "+str(self.modelo1TauSD)+"\n\nModelo com delay:\n\n\u03C4: "+str(self.modelo1TauCD)+"\n \u03C4D: "+str(self.modelo1Delay)
         self.ui.t1ModelTBrowser.setText(txt)
@@ -365,6 +367,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         modelName = str(round(self.modelo2Temp0,2))+"-"+str(round(100*self.temp2U/255.0,2))
         self.ModelList["2"][modelName] = {'T0':self.modelo2Temp0, 'TSS':self.modelo2TempSS, 'DeltaTemp':self.modelo2DeltaTemp, 'K':self.modelo2K, 'TauSD':self.modelo2TauSD, 'TauCD':self.modelo2TauCD, 'Delay':self.modelo2Delay}
         self.saveModelo()
+
+        self.updateModelListView()
 
         txt = "T0: "+str(self.modelo2Temp0)+"\nTss: "+str(self.modelo2TempSS)+"\n\u0394T: "+str(self.modelo2DeltaTemp)+"\n K: "+str(self.modelo2K)+"\n\nModelo sem delay:\n\n\u03C4: "+str(self.modelo2TauSD)+"\n\nModelo com delay:\n\n\u03C4: "+str(self.modelo2TauCD)+"\n \u03C4D: "+str(self.modelo2Delay)
         self.ui.t2ModelTBrowser.setText(txt)
@@ -916,7 +920,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 print("Modelo 1:", self.temp1Count, avrgerror)
                 if avrgerror < 0.3 and not self.ssReady1: #permitir ao utilizado terminar o modelo manualmente
                     self.enableSteadyStateReady1()
-                if avrgerror < 0.02 or self.ssReady1Clicked: # certeza superior a 99.98%
+                if avrgerror < 0.05 or self.ssReady1Clicked: # certeza superior a 99.95%
                     self.ssReady1Clicked = False
                     self.finishModel1(avrg)
                     return
@@ -983,7 +987,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 avrg = sum(self.temp2T_y[self.temp2Count-ns:self.temp2Count])/ns
                 avrgerror = sum(abs(self.temp2T_y[self.temp2Count-ns:self.temp2Count] - avrg)) / ns
                 print("Modelo 2:",self.temp2Count, avrgerror)
-                if avrgerror < 0.02 or self.ssReady2Clicked: # certeza superior a 99.98%
+                if avrgerror < 0.05 or self.ssReady2Clicked: # certeza superior a 99.95%
                     self.finishModel2(avrg)
                     return
                 if avrgerror < 0.3 and not self.ssReady2: #permitir ao utilizado terminar o modelo manualmente
