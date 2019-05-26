@@ -31,6 +31,8 @@ class serialThread (QThread):
         self.getTemperature1 = threading.Event()#receive temperature 1
         self.getTemperature2 = threading.Event()#receive temperature 2
 
+        self.swithADREF = threading.Event()#switch ad reference
+
         self.temperature1TimeSet = False
         self.temperature2TimeSet = False
 
@@ -157,6 +159,16 @@ class serialThread (QThread):
                     self.serialConnection.write(packet)
 
                     self.setTransistor2.clear()
+                if self.swithADREF.is_set():
+                    packet = bytearray()
+                    packet.append(101)
+                    packet.append(13)
+                    self.serialConnection.write(packet)
+                    if self.adcReference == 3300:
+                        self.adcReference = 5000
+                    else:
+                        self.adcReference = 3300
+                    self.swithADREF.clear()
         self.serialConnection.close()
 
     def temperature1TimerSetup(self):

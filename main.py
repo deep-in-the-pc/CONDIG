@@ -30,17 +30,32 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.initSetup()
 
+        #TODO store model in file
+        #TODO Load models on startup
+        #TODO implement on-off control
+        #TODO implement histerese control
+        #TODO implement PID control
+        #TODO implement pid tunning from condig classes
+        #TODO implement option to delete modelsl
+
+    def initSetup(self):
+        # SerialThread
         self.serialThreadSetup()
-        self.is_connected = False
 
-        self.comlist_qtimer = QtCore.QTimer(self)
-        self.comlist_qtimer.timeout.connect(self.getCOMList)
-        self.comlist_qtimer_interval = 100
-        self.comlist_qtimer.start(self.comlist_qtimer_interval)
-        self.guiupdate_qtimer = QtCore.QTimer(self)
-        self.guiupdate_qtimer.timeout.connect(self.updateGUI)
-        self.guiupdate_qtimer_interval = 1000
+        # Timers
+        self.setupTimers()
+
+        # Variables
+        self.setupVariables()
+
+        # CallBacks
+        self.setupCallbacks()
+
+    def setupVariables(self):
+        #Serial
+        self.is_connected = False
 
         #Model
         self.isCreatingModel1 = False
@@ -67,6 +82,16 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.temp2D = 0
         self.temp2U = 0
 
+    def setupTimers(self):
+        self.comlist_qtimer = QtCore.QTimer(self)
+        self.comlist_qtimer.timeout.connect(self.getCOMList)
+        self.comlist_qtimer_interval = 100
+        self.comlist_qtimer.start(self.comlist_qtimer_interval)
+        self.guiupdate_qtimer = QtCore.QTimer(self)
+        self.guiupdate_qtimer.timeout.connect(self.updateGUI)
+        self.guiupdate_qtimer_interval = 1000
+
+    def setupCallbacks(self):
         #CallBacks
 
         #conectarButton Callback
@@ -99,22 +124,14 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.temp2UcheckBox.stateChanged.connect(self.temp2PIDUcheckboxCB)
         #temp1TAEdit Edited Callback
         self.ui.temp1TAEdit.textEdited.connect(self.temp1TAEditValidateCB)
-
         #temp2TAEdit Edited Callback
         self.ui.temp2TAEdit.textEdited.connect(self.temp2TAEditValidateCB)
-
+        #t1CriarModeloButton Callback
         self.ui.t1CriarModeloButton.clicked.connect(self.createModel1)
-
-        #TODO reset everything when disconneting
-        #TODO add set analogReference
-        #TODO store model in file
-        #TODO Load models on startup
-        #TODO implement on-off control
-        #TODO implement histerese control
-        #TODO implement PID control
-        #TODO implement pid tunning from condig classes
-        #TODO implement option to delete models
-
+        #ref3v3RButton Callback
+        self.ui.ref3v3RButton.clicked.connect(self.switchADRef)
+        #ref5vButton Callback
+        self.ui.ref5vButton.clicked.connect(self.switchADRef)
     #Communication
 
     def getCOMList(self):
@@ -437,12 +454,17 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.maxnumberofpoints1 = round(300 * (1000.0 / self.temp1TA))
         self.graphArraysSetup(1)
         if not self.guiupdate_qtimer.isActive():
+            self.ui.ref3v3RButton.setEnabled(False)
+            self.ui.ref5vButton.setEnabled(False)
             self.guiupdate_qtimer.start(self.guiupdate_qtimer_interval)
+
 
     def stopGraph1Update(self):
         self.serialListenerThread.getTemperature1.clear()
         if not self.graph1_isUpdating and not self.graph2_isUpdating:
             self.guiupdate_qtimer.stop()
+            self.ui.ref3v3RButton.setEnabled(True)
+            self.ui.ref5vButton.setEnabled(True)
 
     def startGraph2Update(self):
         self.serialListenerThread.temperature2DeltaTime = self.temp2TA / 1000.0
@@ -450,27 +472,30 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.maxnumberofpoints2 = round(300 * (1000.0 / self.temp2TA))
         self.graphArraysSetup(2)
         if not self.guiupdate_qtimer.isActive():
+            self.ui.ref3v3RButton.setEnabled(False)
+            self.ui.ref5vButton.setEnabled(False)
             self.guiupdate_qtimer.start(self.guiupdate_qtimer_interval)
+
 
     def stopGraph2Update(self):
         self.serialListenerThread.getTemperature2.clear()
         if not self.graph1_isUpdating and not self.graph2_isUpdating:
             self.guiupdate_qtimer.stop()
-
+            self.ui.ref3v3RButton.setEnabled(True)
+            self.ui.ref5vButton.setEnabled(True)
     #Callbacks
 
     def connectCB(self):
 
         if not self.serialListenerThread.closeEvent.is_set():
+            self.stopGraph1Update()
+            self.stopGraph2Update()
+            self.serialListenerThread.newTemperature1Signal.disconnect(self.temperature1CB)
+            self.serialListenerThread.newTemperature2Signal.disconnect(self.temperature2CB)
             self.serialThreadStop()
-            self.ui.conectarButton.setText("Connect")
-            self.ui.connectionLabel.setText("Conexão: Desligada")
-            self.ui.Controlo.setEnabled(False)
-            self.ui.frame.setEnabled(False)
-            self.ui.temp1TAEdit.setText('')
-            self.temp1TA = None
-            self.ui.temp2TAEdit.setText('')
-            self.temp2TA = None
+            self.ui.setupUi(self)
+            self.initSetup()
+
         elif(self.serialCOM != None):
             self.serialListenerThread.closeEvent.clear()
             self.serialThreadStart()
@@ -778,7 +803,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp1StartQButton.setText("Parar")
             self.startGraph1Update()
 
-
     def temp2StartQCB(self):
         if self.graph2_isUpdating:
             self.graph2_isUpdating = False
@@ -789,6 +813,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp2StartQButton.setText("Parar")
             self.startGraph2Update()
 
+    def switchADRef(self):
+        if self.is_connected:
+            self.serialListenerThread.swithADREF.set()
 def main():
     app = QtWidgets.QApplication(sys.argv)
     application = ApplicationWindow()
