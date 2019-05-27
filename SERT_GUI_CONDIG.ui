@@ -205,7 +205,7 @@
              <item>
               <widget class="QGroupBox" name="groupBox_8">
                <property name="title">
-                <string>LED 1</string>
+                <string>LED Verde</string>
                </property>
                <layout class="QGridLayout" name="gridLayout_8">
                 <item row="0" column="0">
@@ -243,7 +243,7 @@
              <item>
               <widget class="QGroupBox" name="groupBox_9">
                <property name="title">
-                <string>LED 2</string>
+                <string>LED Vermelho</string>
                </property>
                <layout class="QGridLayout" name="gridLayout_9">
                 <item row="0" column="0">
