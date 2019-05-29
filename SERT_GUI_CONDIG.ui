@@ -92,7 +92,7 @@
             <enum>QTabWidget::Triangular</enum>
            </property>
            <property name="currentIndex">
-            <number>4</number>
+            <number>5</number>
            </property>
            <widget class="QWidget" name="Transistors">
             <attribute name="title">
@@ -1030,6 +1030,16 @@
               <widget class="QLabel" name="label_27">
                <property name="text">
                 <string>Transistor - Temperatura inicial - Input</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QPushButton" name="removeModelButton">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Remover Modelo</string>
                </property>
               </widget>
              </item>

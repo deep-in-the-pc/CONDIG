@@ -32,9 +32,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.initSetup()
 
-        #TODO implement option to delete models
         #TODO Add save button to graphs for data
         #TODO Change serial connection from thread to process
+
 
     def initSetup(self):
         # SerialThread
@@ -234,6 +234,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.t1CalibrateButton.clicked.connect(self.t1CalibrateButtonCB)
         #t2CalibrateButton clicked Callback
         self.ui.t2CalibrateButton.clicked.connect(self.t2CalibrateButtonCB)
+        #removeModelButton. clicked Callback
+        self.ui.removeModelButton.clicked.connect(self.removeModelButtonCB)
     #Communication
 
     def getCOMList(self):
@@ -519,12 +521,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             name = "Transistor 1 - " + modelo.split('-')[0] + ' - '  +modelo.split('-')[1] + '%'
             self.ui.t1ModeloCBox.addItem(name, data)
 
-        if self.ui.t1ModeloCBox.currentData()[6] <= 0:
-            self.currentModel1HasDelay = False
+        self.ui.t1CalibrateButton.setEnabled(True)
+        if(len(self.ModelList["1"]) == 0):
+            self.ui.t1CalibrateButton.setEnabled(False)
         else:
-            self.currentModel1HasDelay = True
-
-        self.updateMetodo1ComboBox(self.ui.t1ControloCBox.currentIndex())
+            if self.ui.t1ModeloCBox.currentData()[6] <= 0:
+                self.currentModel1HasDelay = False
+            else:
+                self.currentModel1HasDelay = True
+            self.updateMetodo1ComboBox(self.ui.t1ControloCBox.currentIndex())
 
 
 
@@ -541,12 +546,18 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             name = "Transistor 2 - " + modelo.split('-')[0] + ' - '  +modelo.split('-')[1] + '%'
             self.ui.t2ModeloCBox.addItem(name, data)
 
-            if self.ui.t2ModeloCBox.currentData()[6] <= 0:
-                self.currentModel2HasDelay = False
-            else:
-                self.currentModel2HasDelay = True
 
-            self.updateMetodo2ComboBox(self.ui.t2ControloCBox.currentIndex())
+
+            self.ui.t2CalibrateButton.setEnabled(True)
+            if (len(self.ModelList["2"]) == 0):
+                self.ui.t2CalibrateButton.setEnabled(False)
+            else:
+                if self.ui.t2ModeloCBox.currentData()[6] <= 0:
+                    self.currentModel2HasDelay = False
+                else:
+                    self.currentModel2HasDelay = True
+                self.updateMetodo2ComboBox(self.ui.t2ControloCBox.currentIndex())
+
 
     def updateMetodo1ComboBox(self, index):
         self.ui.t1MetodoCBox.clear()
@@ -570,6 +581,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             txtmetodoslist = ['IMC (Sintonia agressiva)', 'IMC (Sintonia moderada)',
                               'IMC (Sintonia conservativa)']
             self.ui.t1MetodoCBox.addItems(txtmetodoslist)
+        if (len(self.ModelList["1"]) == 0):
+            self.ui.t1CalibrateButton.setEnabled(False)
+
     def updateMetodo2ComboBox(self, index):
         self.ui.t2MetodoCBox.clear()
         self.ui.t2CalibrateButton.setEnabled(True)
@@ -592,6 +606,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             txtmetodoslist = ['IMC (Sintonia agressiva)', 'IMC (Sintonia moderada)',
                               'IMC (Sintonia conservativa)']
             self.ui.t2MetodoCBox.addItems(txtmetodoslist)
+        if (len(self.ModelList["2"]) == 0):
+            self.ui.t2CalibrateButton.setEnabled(False)
     #Graph
 
     def updateGUI(self):
@@ -1384,6 +1400,27 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         txt = "T0: "+str(Temp0)+"\nTss: "+str(TempSS)+"\n\u0394T: "+str(DeltaTemp)+"\n K: "+str(K)+"\n\nModelo sem delay:\n\n\u03C4: "+str(TauSD)+"\n\nModelo com delay:\n\n\u03C4: "+str(TauCD)+"\n \u03C4D: "+str(Delay)
         self.ui.modelosTextBrowser.setText(txt)
+
+        self.ui.removeModelButton.setEnabled(True)
+
+    def removeModelButtonCB(self):
+        #t1ModeloCBox currentindexChanged Callback
+        self.ui.t1ModeloCBox.currentIndexChanged.disconnect(self.t1ModeloCBoxCIDCB)
+        #t2ModeloCBox currentindexChanged Callback
+        self.ui.t2ModeloCBox.currentIndexChanged.disconnect(self.t2ModeloCBoxCIDCB)
+
+        transistor = self.ui.modelListWidget.currentItem().text().split()[1]
+        key = self.ui.modelListWidget.currentItem().text().split()[3]+"-"+self.ui.modelListWidget.currentItem().text().split()[5][:-1]
+        self.ModelList[transistor].pop(key)
+        self.saveModelo()
+        self.updateModelListView()
+        self.updateModel1ComboBox()
+        self.updateModel2ComboBox()
+
+        #t1ModeloCBox currentindexChanged Callback
+        self.ui.t1ModeloCBox.currentIndexChanged.connect(self.t1ModeloCBoxCIDCB)
+        #t2ModeloCBox currentindexChanged Callback
+        self.ui.t2ModeloCBox.currentIndexChanged.connect(self.t2ModeloCBoxCIDCB)
 
     def ooT1StartCB(self):
         if self.is_connected and not self.isControlOnOff1:
