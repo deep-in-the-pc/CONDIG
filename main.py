@@ -32,10 +32,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.initSetup()
 
-        #TODO implement PID control
         #TODO implement pid tunning from condig classes
-        #TODO implement option to delete modelsl
+        #TODO implement option to delete models
         #TODO Add save button to graphs for data
+        #TODO Change serial connection from thread to process
 
     def initSetup(self):
         # SerialThread
@@ -83,10 +83,33 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ssReady2Clicked = False
 
         #Control
+        self.t1TargetTemp = None
+        self.t1TempError = None
+        self.t1ControlP = 0
+        self.t1ControlI = 0
+        self.t1ControlD = 0
+        self.t1ControlAWTt = 0
+        self.t1ControlLastError = 0
+
+        self.t2TargetTemp = None
+        self.t2TempError = None
+        self.t2ControlP = 0
+        self.t2ControlI = 0
+        self.t2ControlD = 0
+        self.t2ControlAWTt = 0
+        self.t2ControlLastError = 0
+
         self.isControlOnOff1 = False
         self.isControlOnOff2 = False
+
         self.isControlHist1 = False
         self.isControlHist2 = False
+
+        self.isControlPID1 = False
+        self.isControlPID2 = False
+
+        self.isControlAW1 = False
+        self.isControlAW2 = False
 
         #Graph
         self.temp1TA = None
@@ -176,7 +199,26 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.hstT1StartButton.clicked.connect(self.hstT1StartCB)
         #hstT2StartButton Callback
         self.ui.hstT2StartButton.clicked.connect(self.hstT2StartCB)
-        
+        #pidT1StartButton Callback
+        self.ui.pidT1StartButton.clicked.connect(self.pidT1StartCB)
+        #pidT2StartButton Callback
+        self.ui.pidT2StartButton.clicked.connect(self.pidT2StartCB)
+        #pidT1AWcheckBox Callback
+        self.ui.pidT1AWcheckBox.stateChanged.connect(self.pidT1AWcheckBoxCB)
+        #pidT2AWcheckBox Callback
+        self.ui.pidT2AWcheckBox.stateChanged.connect(self.pidT2AWcheckBoxCB)
+        #pidT1PDSBox valueChanged Callback
+        self.ui.pidT1PDSBox.valueChanged.connect(self.pidT1AWcheckCB)
+        #pidT1IDSBox valueChanged Callback
+        self.ui.pidT1IDSBox.valueChanged.connect(self.pidT1AWcheckCB)
+        #pidT1DDSBox valueChanged Callback
+        self.ui.pidT1DDSBox.valueChanged.connect(self.pidT1AWcheckCB)
+        #pidT2PDSBox valueChanged Callback
+        self.ui.pidT2PDSBox.valueChanged.connect(self.pidT2AWcheckCB)
+        #pidT2IDSBox valueChanged Callback
+        self.ui.pidT2IDSBox.valueChanged.connect(self.pidT2AWcheckCB)
+        #pidT2DDSBox valueChanged Callback
+        self.ui.pidT2DDSBox.valueChanged.connect(self.pidT2AWcheckCB)
     #Communication
 
     def getCOMList(self):
@@ -491,12 +533,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                         self.plotsObjects[nplots][1].addItem(temp, 'Componente derivativa 1')
                     if 'U' in plot:
                         for item in self.plotsObjects[nplots][0].listDataItems():
-                            if item.name() == "Sinal de entrada 1":
+                            if item.name() == "Sinal de Controlo 1":
                                 self.plotsObjects[nplots][0].removeItem(item)
                         temp = self.plotsObjects[nplots][0].plot(self.temp1Time_x[:self.temp1Count], self.temp1U_y[:self.temp1Count], pen=(191, 191, 0),
-                                                                 name="Sinal de entrada 1")
-                        self.plotsObjects[nplots][1].removeItem('Sinal de entrada 1')
-                        self.plotsObjects[nplots][1].addItem(temp, 'Sinal de entrada 1')
+                                                                 name="Sinal de Controlo 1")
+                        self.plotsObjects[nplots][1].removeItem('Sinal de Controlo 1')
+                        self.plotsObjects[nplots][1].addItem(temp, 'Sinal de Controlo 1')
 
                 nplots = nplots + 1
 
@@ -540,12 +582,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                         self.plotsObjects[nplots][1].addItem(temp, 'Componente derivativa 2')
                     if 'U' in plot:
                         for item in self.plotsObjects[nplots][0].listDataItems():
-                            if item.name() == "Sinal de entrada 2":
+                            if item.name() == "Sinal de Controlo 2":
                                 self.plotsObjects[nplots][0].removeItem(item)
                         temp = self.plotsObjects[nplots][0].plot(self.temp2Time_x[:self.temp2Count], self.temp2U_y[:self.temp2Count], pen=(191, 191, 0),
-                                                                 name="Sinal de entrada 2")
-                        self.plotsObjects[nplots][1].removeItem('Sinal de entrada 2')
-                        self.plotsObjects[nplots][1].addItem(temp, 'Sinal de entrada 2')
+                                                                 name="Sinal de Controlo 2")
+                        self.plotsObjects[nplots][1].removeItem('Sinal de Controlo 2')
+                        self.plotsObjects[nplots][1].addItem(temp, 'Sinal de Controlo 2')
 
                 nplots = nplots + 1
 
@@ -621,7 +663,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.temp1Count = 0
                 self.temp1Time_x = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp1TA)))
                 self.temp1T_y = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp1TA)))
-            print("size 1:", self.temp1Time_x.size)
         elif plot == 2:
             if not self.isCreatingModel2:
                 self.temp2Count = 0
@@ -636,7 +677,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.temp2Count = 0
                 self.temp2Time_x = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA)))
                 self.temp2T_y = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA)))
-            print("size 2:", self.temp2Time_x.size)
 
     def startGraph1Update(self):
         self.serialListenerThread.temperature1DeltaTime = self.temp1TA/1000.0
@@ -871,7 +911,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def temperature1CB(self, temp):
         self.temp1T = temp
 
-        if not self.isCreatingModel1 and not self.isControlOnOff1 and not self.isControlHist1:
+        if not self.isCreatingModel1 and not self.isControlOnOff1 and not self.isControlHist1 and not self.isControlPID1:
 
             if (self.temp1Count < self.maxnumberofpoints1):
 
@@ -905,7 +945,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
                 self.temp1Time_x[-1] = time
 
-        elif self.isCreatingModel1 and not self.isControlOnOff1 and not self.isControlHist1:
+        elif self.isCreatingModel1 and not self.isControlOnOff1 and not self.isControlHist1 and not self.isControlPID1:
             time = self.temp1Count * self.temp1TA / 1000.0
             self.temp1T_y[self.temp1Count] = self.temp1T
             self.temp1Time_x[self.temp1Count] = time
@@ -916,7 +956,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 ns = round(30*(1000.0/self.temp1TA))
                 avrg = sum(self.temp1T_y[self.temp1Count-ns:self.temp1Count])/ns
                 avrgerror = sum(abs(self.temp1T_y[self.temp1Count-ns:self.temp1Count] - avrg)) / ns
-                print("Modelo 1:", self.temp1Count, avrgerror)
                 if avrgerror < 0.3 and not self.ssReady1: #permitir ao utilizado terminar o modelo manualmente
                     self.enableSteadyStateReady1()
                 if avrgerror < 0.05 or self.ssReady1Clicked: # certeza superior a 99.95%
@@ -949,7 +988,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             self.temp1Count = self.temp1Count + 1
 
-        elif self.isControlHist1 and not self.isCreatingModel1 and not self.isControlOnOff1:
+        elif self.isControlHist1 and not self.isCreatingModel1 and not self.isControlOnOff1 and not self.isControlPID1:
 
             error = self.t1TargetTemp - self.temp1T
 
@@ -975,10 +1014,75 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             self.temp1Count = self.temp1Count + 1
 
+        elif self.isControlPID1 and not self.isCreatingModel1 and not self.isControlOnOff1 and not self.isControlHist1:
+
+            if self.isControlAW1:
+                erro = self.t1TargetTemp - self.temp1T
+
+                derivativo = (erro - self.t1ControlLastError) / (self.temp1TA / 1000.0)
+
+                self.temp1P = erro * self.t1ControlP;
+
+                self.temp1D = derivativo * self.t1ControlD
+
+                pwm = self.temp1P + self.temp1I + self.temp1D
+
+                self.t1ControlLastError = erro
+
+                # Saturação
+                self.temp1U = pwm
+
+                if pwm > 255:
+                    self.temp1U = 255
+                elif pwm < 0:
+                    self.temp1U = 0
+
+                #Anti Windup
+                self.temp1I = self.temp1I + self.t1ControlI * (self.temp1TA / 1000.0 ) * erro + ((self.temp1TA / 1000.0) / self.t1ControlAWTt) * (self.temp1U - pwm);
+
+            else:
+                erro = self.t1TargetTemp - self.temp1T
+
+                derivativo = (erro - self.t1ControlLastError)/(self.temp1TA / 1000.0 )
+
+                self.temp1P = erro * self.t1ControlP;
+
+                self.temp1I = self.temp1I + erro * self.t1ControlI * (self.temp1TA / 1000.0 )
+
+                self.temp1D = derivativo * self.t1ControlD
+
+                self.temp1U = self.temp1P + self.temp1I + self.temp1D
+
+                self.t1ControlLastError = erro
+
+
+                #Saturação
+
+                if self.temp1U > 255:
+                    self.temp1U = 255
+                elif self.temp1U < 0:
+                    self.temp1U = 0
+
+            # Send Input
+            self.temp1U = round(self.temp1U)
+            self.serialListenerThread.transistor1 = round(self.temp1U)
+            self.serialListenerThread.setTransistor1.set()
+
+            # Store Data
+            time = self.temp1Count * self.temp1TA / 1000.0
+            self.temp1T_y[self.temp1Count] = self.temp1T
+            self.temp1U_y[self.temp1Count] = self.temp1U
+            self.temp1P_y[self.temp1Count] = self.temp1P
+            self.temp1I_y[self.temp1Count] = self.temp1I
+            self.temp1D_y[self.temp1Count] = self.temp1D
+            self.temp1Time_x[self.temp1Count] = time
+
+            self.temp1Count = self.temp1Count + 1
+
     def temperature2CB(self, temp):
         
         self.temp2T = temp
-        if not self.isCreatingModel2 and not self.isControlOnOff2 and not self.isControlHist2:
+        if not self.isCreatingModel2 and not self.isControlOnOff2 and not self.isControlHist2 and not self.isControlPID2:
             if (self.temp2Count < self.maxnumberofpoints2):
 
                 time = self.temp2Count * self.temp2TA / 1000.0
@@ -1011,7 +1115,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
                 self.temp2Time_x[-1] = time
 
-        elif self.isCreatingModel2 and not self.isControlOnOff2 and not self.isControlHist2:
+        elif self.isCreatingModel2 and not self.isControlOnOff2 and not self.isControlHist2 and not self.isControlPID2:
             time = self.temp2Count * self.temp2TA / 1000.0
             self.temp2T_y[self.temp2Count] = self.temp2T
             self.temp2Time_x[self.temp2Count] = time
@@ -1022,7 +1126,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 ns = round(30*(1000.0/self.temp2TA))
                 avrg = sum(self.temp2T_y[self.temp2Count-ns:self.temp2Count])/ns
                 avrgerror = sum(abs(self.temp2T_y[self.temp2Count-ns:self.temp2Count] - avrg)) / ns
-                print("Modelo 2:",self.temp2Count, avrgerror)
                 if avrgerror < 0.05 or self.ssReady2Clicked: # certeza superior a 99.95%
                     self.finishModel2(avrg)
                     return
@@ -1033,7 +1136,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.finishModel2(avrg)
                 return
 
-        elif self.isControlOnOff2 and not self.isCreatingModel2 and not self.isControlHist2:
+        elif self.isControlOnOff2 and not self.isCreatingModel2 and not self.isControlHist2 and not self.isControlPID2:
 
             #Controlo
             if self.temp2T > self.t2TargetTemp:
@@ -1055,7 +1158,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             self.temp2Count = self.temp2Count + 1
 
-        elif self.isControlHist2 and not self.isCreatingModel2 and not self.isControlOnOff2:
+        elif self.isControlHist2 and not self.isCreatingModel2 and not self.isControlOnOff2 and not self.isControlPID2:
 
             error = self.t2TargetTemp - self.temp2T
 
@@ -1077,6 +1180,71 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             time = self.temp2Count * self.temp2TA / 1000.0
             self.temp2T_y[self.temp2Count] = self.temp2T
             self.temp2U_y[self.temp2Count] = self.temp2U
+            self.temp2Time_x[self.temp2Count] = time
+
+            self.temp2Count = self.temp2Count + 1
+
+        elif self.isControlPID2 and not self.isCreatingModel2 and not self.isControlOnOff2 and not self.isControlHist2:
+
+            if self.isControlAW2:
+                erro = self.t2TargetTemp - self.temp2T
+
+                derivativo = (erro - self.t2ControlLastError) / (self.temp2TA / 1000.0)
+
+                self.temp2P = erro * self.t2ControlP;
+
+                self.temp2D = derivativo * self.t2ControlD
+
+                pwm = self.temp2P + self.temp2I + self.temp2D
+
+                self.t2ControlLastError = erro
+
+                # Saturação
+                self.temp2U = pwm
+
+                if pwm > 255:
+                    self.temp2U = 255
+                elif pwm < 0:
+                    self.temp2U = 0
+
+                #Anti Windup
+                self.temp2I = self.temp2I + self.t2ControlI * (self.temp2TA / 1000.0 ) * erro + ((self.temp2TA / 1000.0) / self.t2ControlAWTt) * (self.temp2U - pwm);
+
+            else:
+                erro = self.t2TargetTemp - self.temp2T
+
+                derivativo = (erro - self.t2ControlLastError)/(self.temp2TA / 1000.0 )
+
+                self.temp2P = erro * self.t2ControlP;
+
+                self.temp2I = self.temp2I + erro * self.t2ControlI * (self.temp2TA / 1000.0 )
+
+                self.temp2D = derivativo * self.t2ControlD
+
+                self.temp2U = self.temp2P + self.temp2I + self.temp2D
+
+                self.t2ControlLastError = erro
+
+
+                #Saturação
+
+                if self.temp2U > 255:
+                    self.temp2U = 255
+                elif self.temp2U < 0:
+                    self.temp2U = 0
+
+            # Send Input
+            self.temp2U = round(self.temp2U)
+            self.serialListenerThread.transistor2 = round(self.temp2U)
+            self.serialListenerThread.setTransistor2.set()
+
+            # Store Data
+            time = self.temp2Count * self.temp2TA / 1000.0
+            self.temp2T_y[self.temp2Count] = self.temp2T
+            self.temp2U_y[self.temp2Count] = self.temp2U
+            self.temp2P_y[self.temp2Count] = self.temp2P
+            self.temp2I_y[self.temp2Count] = self.temp2I
+            self.temp2D_y[self.temp2Count] = self.temp2D
             self.temp2Time_x[self.temp2Count] = time
 
             self.temp2Count = self.temp2Count + 1
@@ -1154,6 +1322,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp1IcheckBox.setEnabled(True)
             self.ui.temp1DcheckBox.setEnabled(True)
 
+            # Send Input
+            self.temp1U = 0
+            self.serialListenerThread.transistor1 = self.temp1U
+            self.serialListenerThread.setTransistor1.set()
+
             self.stopGraph1Update()
             self.ui.temp1StartQButton.setText("Começar")
 
@@ -1195,6 +1368,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp2PcheckBox.setEnabled(True)
             self.ui.temp2IcheckBox.setEnabled(True)
             self.ui.temp2DcheckBox.setEnabled(True)
+
+            # Send Input
+            self.temp2U = 0
+            self.serialListenerThread.transistor2 = self.temp2U
+            self.serialListenerThread.setTransistor2.set()
 
             self.stopGraph2Update()
             self.ui.temp2StartQButton.setText("Começar")
@@ -1245,6 +1423,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp1IcheckBox.setEnabled(True)
             self.ui.temp1DcheckBox.setEnabled(True)
 
+            # Send Input
+            self.temp1U = 0
+            self.serialListenerThread.transistor1 = self.temp1U
+            self.serialListenerThread.setTransistor1.set()
+
             self.stopGraph1Update()
             self.ui.temp1StartQButton.setText("Começar")
             
@@ -1294,9 +1477,166 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp2IcheckBox.setEnabled(True)
             self.ui.temp2DcheckBox.setEnabled(True)
 
+            # Send Input
+            self.temp2U = 0
+            self.serialListenerThread.transistor2 = self.temp2U
+            self.serialListenerThread.setTransistor2.set()
+
             self.stopGraph2Update()
             self.ui.temp2StartQButton.setText("Começar")
 
+    def pidT1StartCB(self):
+        if self.is_connected and not self.isControlPID1:
+            self.ui.pidT1StartButton.setText("Parar")
+            self.t1TargetTemp = self.ui.pidT1TargetDSBox.value()
+            self.t1ControlP = self.ui.pidT1PDSBox.value()
+            self.t1ControlI = self.ui.pidT1IDSBox.value()
+            self.t1ControlD = self.ui.pidT1DDSBox.value()
+
+            if self.isControlAW1 and self.t1ControlD > 0:
+                self.t1ControlAWTt = math.sqrt((self.t1ControlP/self.t1ControlI)*(self.t1ControlD/self.t1ControlP))
+            elif self.isControlAW1 and self.t1ControlD == 0:
+                self.t1ControlAWTt = 0.5*(self.t1ControlP/self.t1ControlI)
+
+            self.isControlPID1 = True
+
+            #disable all other transistor 1 related functions
+            self.ui.t1CalibrateButton.setEnabled(False)
+            self.ui.groupBox_10.setEnabled(False)
+            self.ui.groupBox_6.setEnabled(False)
+            self.ui.groupBox_4.setEnabled(False)
+            self.ui.pidT1TargetDSBox.setEnabled(False)
+            self.ui.pidT1PDSBox.setEnabled(False)
+            self.ui.pidT1IDSBox.setEnabled(False)
+            self.ui.pidT1DDSBox.setEnabled(False)
+            self.ui.temp1TAEdit.setEnabled(False)
+            self.ui.temp1StartQButton.setEnabled(False)
+            self.ui.pidT1AWcheckBox.setEnabled(False)
+
+            # Send Input
+            self.temp1U = 0
+            self.serialListenerThread.transistor1 = self.temp1U
+            self.serialListenerThread.setTransistor1.set()
+
+            #Receber Dados
+            self.graph1_isUpdating = True
+            self.ui.temp1StartQButton.setText("Parar")
+            self.startGraph1Update()
+
+        elif self.is_connected and self.isControlPID1:
+            self.ui.pidT1StartButton.setText("Começar")
+            self.isControlPID1 = False
+            self.graph1_isUpdating = False
+
+            # enable all other transistor 1 related functions
+            self.ui.t1CalibrateButton.setEnabled(True)
+            self.ui.groupBox_10.setEnabled(True)
+            self.ui.groupBox_6.setEnabled(True)
+            self.ui.groupBox_4.setEnabled(True)
+            self.ui.pidT1TargetDSBox.setEnabled(True)
+            self.ui.pidT1PDSBox.setEnabled(True)
+            self.ui.pidT1IDSBox.setEnabled(True)
+            self.ui.pidT1DDSBox.setEnabled(True)
+            self.ui.temp1TAEdit.setEnabled(True)
+            self.ui.temp1StartQButton.setEnabled(True)
+            self.ui.pidT1AWcheckBox.setEnabled(True)
+
+            # Send Input
+            self.temp1U = 0
+            self.serialListenerThread.transistor1 = self.temp1U
+            self.serialListenerThread.setTransistor1.set()
+
+            self.stopGraph1Update()
+            self.ui.temp1StartQButton.setText("Começar")
+
+    def pidT2StartCB(self):
+        if self.is_connected and not self.isControlPID2:
+            self.ui.pidT2StartButton.setText("Parar")
+            self.t2TargetTemp = self.ui.pidT2TargetDSBox.value()
+            self.t2ControlP = self.ui.pidT2PDSBox.value()
+            self.t2ControlI = self.ui.pidT2IDSBox.value()
+            self.t2ControlD = self.ui.pidT2DDSBox.value()
+            self.isControlPID2 = True
+
+            #disable all other transistor 2 related functions
+            self.ui.t2CalibrateButton.setEnabled(False)
+            self.ui.groupBox_11.setEnabled(False)
+            self.ui.groupBox_7.setEnabled(False)
+            self.ui.groupBox_5.setEnabled(False)
+            self.ui.pidT2TargetDSBox.setEnabled(False)
+            self.ui.pidT2PDSBox.setEnabled(False)
+            self.ui.pidT2IDSBox.setEnabled(False)
+            self.ui.pidT2DDSBox.setEnabled(False)
+            self.ui.temp2TAEdit.setEnabled(False)
+            self.ui.temp2StartQButton.setEnabled(False)
+            self.ui.temp2PcheckBox.setEnabled(False)
+            self.ui.temp2IcheckBox.setEnabled(False)
+            self.ui.temp2DcheckBox.setEnabled(False)
+            self.ui.pidT2AWcheckBox.setEnabled(False)
+
+            # Send Input
+            self.temp2U = 0
+            self.serialListenerThread.transistor2 = self.temp2U
+            self.serialListenerThread.setTransistor2.set()
+
+            #Receber Dados
+            self.graph2_isUpdating = True
+            self.ui.temp2StartQButton.setText("Parar")
+            self.startGraph2Update()
+
+        elif self.is_connected and self.isControlPID2:
+            self.ui.pidT2StartButton.setText("Começar")
+            self.isControlPID2 = False
+            self.graph2_isUpdating = False
+
+            # enable all other transistor 2 related functions
+            self.ui.t2CalibrateButton.setEnabled(True)
+            self.ui.groupBox_11.setEnabled(True)
+            self.ui.groupBox_7.setEnabled(True)
+            self.ui.groupBox_5.setEnabled(True)
+            self.ui.pidT2TargetDSBox.setEnabled(True)
+            self.ui.pidT2PDSBox.setEnabled(True)
+            self.ui.pidT2IDSBox.setEnabled(True)
+            self.ui.pidT2DDSBox.setEnabled(True)
+            self.ui.temp2TAEdit.setEnabled(True)
+            self.ui.temp2StartQButton.setEnabled(True)
+            self.ui.temp2PcheckBox.setEnabled(True)
+            self.ui.temp2IcheckBox.setEnabled(True)
+            self.ui.temp2DcheckBox.setEnabled(True)
+            self.ui.pidT2AWcheckBox.setEnabled(True)
+
+            # Send Input
+            self.temp2U = 0
+            self.serialListenerThread.transistor1 = self.temp2U
+            self.serialListenerThread.setTransistor2.set()
+
+            self.stopGraph2Update()
+            self.ui.temp2StartQButton.setText("Começar")
+
+    def pidT1AWcheckBoxCB(self, state):
+        if state == 2:
+            self.isControlAW1 = True
+        elif state == 0:
+            self.isControlAW1 = False
+
+    def pidT2AWcheckBoxCB(self, state):
+        if state == 2:
+            self.isControlAW2 = True
+        elif state == 0:
+            self.isControlAW2 = False
+
+    def pidT1AWcheckCB(self, value):
+        if self.ui.pidT1PDSBox.value() > 0 and self.ui.pidT1IDSBox.value() > 0:
+            self.ui.pidT1AWcheckBox.setEnabled(True)
+        else:
+            self.ui.pidT1AWcheckBox.setCheckState(0)
+            self.ui.pidT1AWcheckBox.setEnabled(False)
+    def pidT2AWcheckCB(self, value):
+        if self.ui.pidT2PDSBox.value() > 0 and self.ui.pidT2IDSBox.value() > 0:
+            self.ui.pidT2AWcheckBox.setEnabled(True)
+        else:
+            self.ui.pidT2AWcheckBox.setCheckState(0)
+            self.ui.pidT2AWcheckBox.setEnabled(False)
 def main():
     app = QtWidgets.QApplication(sys.argv)
     application = ApplicationWindow()
