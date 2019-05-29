@@ -32,7 +32,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.initSetup()
 
-        #TODO implement pid tunning from condig classes
         #TODO implement option to delete models
         #TODO Add save button to graphs for data
         #TODO Change serial connection from thread to process
@@ -51,6 +50,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         #update model list
         self.updateModelListView()
+        self.updateModel1ComboBox()
+        self.updateModel2ComboBox()
 
         # CallBacks
         self.setupCallbacks()
@@ -70,6 +71,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.modelo1Delay = None
         self.ssReady1 = False
         self.ssReady1Clicked = False
+        self.currentModel1HasDelay = False
 
         self.isCreatingModel2 = False
         self.modelo2Temp0 = None
@@ -81,6 +83,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.modelo2Delay = None
         self.ssReady2 = False
         self.ssReady2Clicked = False
+        self.currentModel2HasDelay = False
 
         #Control
         self.t1TargetTemp = None
@@ -219,6 +222,18 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.pidT2IDSBox.valueChanged.connect(self.pidT2AWcheckCB)
         #pidT2DDSBox valueChanged Callback
         self.ui.pidT2DDSBox.valueChanged.connect(self.pidT2AWcheckCB)
+        #t1ModeloCBox currentindexChanged Callback
+        self.ui.t1ModeloCBox.currentIndexChanged.connect(self.t1ModeloCBoxCIDCB)
+        #t2ModeloCBox currentindexChanged Callback
+        self.ui.t2ModeloCBox.currentIndexChanged.connect(self.t2ModeloCBoxCIDCB)
+        #t1ControloCBox currentindexChanged Callback
+        self.ui.t1ControloCBox.currentIndexChanged.connect(self.t1ControloCBoxCIDCB)
+        #t2ControloCBox currentindexChanged Callback
+        self.ui.t2ControloCBox.currentIndexChanged.connect(self.t2ControloCBoxCIDCB)
+        #t1CalibrateButton clicked Callback
+        self.ui.t1CalibrateButton.clicked.connect(self.t1CalibrateButtonCB)
+        #t2CalibrateButton clicked Callback
+        self.ui.t2CalibrateButton.clicked.connect(self.t2CalibrateButtonCB)
     #Communication
 
     def getCOMList(self):
@@ -341,6 +356,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.saveModelo()
 
         self.updateModelListView()
+        self.updateModel1ComboBox()
 
         txt = "T0: "+str(self.modelo1Temp0)+"\nTss: "+str(self.modelo1TempSS)+"\n\u0394T: "+str(self.modelo1DeltaTemp)+"\n K: "+str(self.modelo1K)+"\n\nModelo sem delay:\n\n\u03C4: "+str(self.modelo1TauSD)+"\n\nModelo com delay:\n\n\u03C4: "+str(self.modelo1TauCD)+"\n \u03C4D: "+str(self.modelo1Delay)
         self.ui.t1ModelTBrowser.setText(txt)
@@ -427,7 +443,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.saveModelo()
 
         self.updateModelListView()
-
+        self.updateModel2ComboBox()
         txt = "T0: "+str(self.modelo2Temp0)+"\nTss: "+str(self.modelo2TempSS)+"\n\u0394T: "+str(self.modelo2DeltaTemp)+"\n K: "+str(self.modelo2K)+"\n\nModelo sem delay:\n\n\u03C4: "+str(self.modelo2TauSD)+"\n\nModelo com delay:\n\n\u03C4: "+str(self.modelo2TauCD)+"\n \u03C4D: "+str(self.modelo2Delay)
         self.ui.t2ModelTBrowser.setText(txt)
 
@@ -490,6 +506,92 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             listEntry.setData(32, dataListParam)
             self.ui.modelListWidget.addItem(listEntry)
 
+    def updateModel1ComboBox(self):
+
+        self.ui.t1ModeloCBox.clear()
+
+        for modelo in self.ModelList["1"]:
+            parameters = self.ModelList["1"][modelo]
+
+            dataListParam = parameters["T0"], parameters["TSS"], parameters["DeltaTemp"], parameters["K"], parameters["TauSD"], parameters["TauCD"], parameters["Delay"],
+            data = QtCore.QVariant(dataListParam)
+
+            name = "Transistor 1 - " + modelo.split('-')[0] + ' - '  +modelo.split('-')[1] + '%'
+            self.ui.t1ModeloCBox.addItem(name, data)
+
+        if self.ui.t1ModeloCBox.currentData()[6] <= 0:
+            self.currentModel1HasDelay = False
+        else:
+            self.currentModel1HasDelay = True
+
+        self.updateMetodo1ComboBox(self.ui.t1ControloCBox.currentIndex())
+
+
+
+    def updateModel2ComboBox(self):
+
+        self.ui.t2ModeloCBox.clear()
+
+        for modelo in self.ModelList["2"]:
+            parameters = self.ModelList["2"][modelo]
+
+            dataListParam = parameters["T0"], parameters["TSS"], parameters["DeltaTemp"], parameters["K"], parameters["TauSD"], parameters["TauCD"], parameters["Delay"],
+            data = QtCore.QVariant(dataListParam)
+
+            name = "Transistor 2 - " + modelo.split('-')[0] + ' - '  +modelo.split('-')[1] + '%'
+            self.ui.t2ModeloCBox.addItem(name, data)
+
+            if self.ui.t2ModeloCBox.currentData()[6] <= 0:
+                self.currentModel2HasDelay = False
+            else:
+                self.currentModel2HasDelay = True
+
+            self.updateMetodo2ComboBox(self.ui.t2ControloCBox.currentIndex())
+
+    def updateMetodo1ComboBox(self, index):
+        self.ui.t1MetodoCBox.clear()
+        self.ui.t1CalibrateButton.setEnabled(True)
+        if index == 0 and self.currentModel1HasDelay:
+            txtmetodoslist = ['Ziegler-Nichols Malha Aberta', 'Cohen-Coon', 'ITAE - Entradas de Referência', 'ITAE - Rejeição a Perturbações']
+            self.ui.t1MetodoCBox.addItems(txtmetodoslist)
+        elif index == 0 and not self.currentModel1HasDelay:
+            self.ui.t1CalibrateButton.setEnabled(False)
+        elif index == 1 and self.currentModel1HasDelay:
+            txtmetodoslist = ['Ziegler-Nichols Malha Aberta', 'Cohen-Coon', 'ITAE - Entradas de Referência', 'ITAE - Rejeição a Perturbações', 'IMC (Sintonia agressiva)', 'IMC (Sintonia moderada)', 'IMC (Sintonia conservativa)']
+            self.ui.t1MetodoCBox.addItems(txtmetodoslist)
+        elif index == 1 and not self.currentModel1HasDelay:
+            txtmetodoslist = ['IMC (Sintonia agressiva)', 'IMC (Sintonia moderada)', 'IMC (Sintonia conservativa)']
+            self.ui.t1MetodoCBox.addItems(txtmetodoslist)
+        elif index == 2 and self.currentModel1HasDelay:
+            txtmetodoslist = ['Ziegler-Nichols Malha Aberta', 'Cohen-Coon', 'IMC (Sintonia agressiva)', 'IMC (Sintonia moderada)',
+                              'IMC (Sintonia conservativa)']
+            self.ui.t1MetodoCBox.addItems(txtmetodoslist)
+        elif index == 2 and not self.currentModel1HasDelay:
+            txtmetodoslist = ['IMC (Sintonia agressiva)', 'IMC (Sintonia moderada)',
+                              'IMC (Sintonia conservativa)']
+            self.ui.t1MetodoCBox.addItems(txtmetodoslist)
+    def updateMetodo2ComboBox(self, index):
+        self.ui.t2MetodoCBox.clear()
+        self.ui.t2CalibrateButton.setEnabled(True)
+        if index == 0 and self.currentModel2HasDelay:
+            txtmetodoslist = ['Ziegler-Nichols Malha Aberta', 'Cohen-Coon', 'ITAE - Entradas de Referência', 'ITAE - Rejeição a Perturbações']
+            self.ui.t2MetodoCBox.addItems(txtmetodoslist)
+        elif index == 0 and not self.currentModel2HasDelay:
+            self.ui.t2CalibrateButton.setEnabled(False)
+        elif index == 1 and self.currentModel2HasDelay:
+            txtmetodoslist = ['Ziegler-Nichols Malha Aberta', 'Cohen-Coon', 'ITAE - Entradas de Referência', 'ITAE - Rejeição a Perturbações', 'IMC (Sintonia agressiva)', 'IMC (Sintonia moderada)', 'IMC (Sintonia conservativa)']
+            self.ui.t2MetodoCBox.addItems(txtmetodoslist)
+        elif index == 1 and not self.currentModel2HasDelay:
+            txtmetodoslist = ['IMC (Sintonia agressiva)', 'IMC (Sintonia moderada)', 'IMC (Sintonia conservativa)']
+            self.ui.t2MetodoCBox.addItems(txtmetodoslist)
+        elif index == 2 and self.currentModel2HasDelay:
+            txtmetodoslist = ['Ziegler-Nichols Malha Aberta', 'Cohen-Coon', 'IMC (Sintonia agressiva)', 'IMC (Sintonia moderada)',
+                              'IMC (Sintonia conservativa)']
+            self.ui.t2MetodoCBox.addItems(txtmetodoslist)
+        elif index == 2 and not self.currentModel2HasDelay:
+            txtmetodoslist = ['IMC (Sintonia agressiva)', 'IMC (Sintonia moderada)',
+                              'IMC (Sintonia conservativa)']
+            self.ui.t2MetodoCBox.addItems(txtmetodoslist)
     #Graph
 
     def updateGUI(self):
@@ -1631,12 +1733,235 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         else:
             self.ui.pidT1AWcheckBox.setCheckState(0)
             self.ui.pidT1AWcheckBox.setEnabled(False)
+
     def pidT2AWcheckCB(self, value):
         if self.ui.pidT2PDSBox.value() > 0 and self.ui.pidT2IDSBox.value() > 0:
             self.ui.pidT2AWcheckBox.setEnabled(True)
         else:
             self.ui.pidT2AWcheckBox.setCheckState(0)
             self.ui.pidT2AWcheckBox.setEnabled(False)
+
+    def t1ModeloCBoxCIDCB(self):
+        if self.ui.t1ModeloCBox.currentData()[6] <= 0:
+            self.currentModel1HasDelay = False
+        else:
+            self.currentModel1HasDelay = True
+        self.updateMetodo1ComboBox(self.ui.t1ControloCBox.currentIndex())
+
+    def t2ModeloCBoxCIDCB(self):
+        if self.ui.t2ModeloCBox.currentData()[6] <= 0:
+            self.currentModel2HasDelay = False
+        else:
+            self.currentModel2HasDelay = True
+        self.updateMetodo2ComboBox(self.ui.t2ControloCBox.currentIndex())
+
+
+    def t1ControloCBoxCIDCB(self, index):
+        self.updateMetodo1ComboBox(index)
+            
+    def t2ControloCBoxCIDCB(self, index):
+        self.updateMetodo2ComboBox(index)
+
+    def t1CalibrateButtonCB(self):
+        T0, Tss, DeltaTemp, K, TauSD, TauCD, Delay = self.ui.t1ModeloCBox.currentData()
+        K = K/255.0
+        controlo = self.ui.t1ControloCBox.currentText()
+        metodo = self.ui.t1MetodoCBox.currentText()
+
+        if controlo == 'P':
+            if metodo == 'Ziegler-Nichols Malha Aberta':
+                self.t1ControlP = TauCD/(K*Delay)
+            if metodo == 'Cohen-Coon':
+                self.t1ControlP = (1.03/K)*(TauCD/Delay+0.34)
+            if metodo == 'ITAE - Entradas de Referência':
+                self.t1ControlP = (0.2/K)*(TauCD/Delay)**1.22
+            if metodo == 'ITAE - Rejeição a Perturbações':
+                self.t1ControlP = (0.5/K)*(TauCD/Delay)**1.08
+
+            self.ui.pidT1PDSBox.setValue(self.t1ControlP)
+            self.ui.pidT1IDSBox.setValue(0)
+            self.ui.pidT1DDSBox.setValue(0)
+
+        elif controlo == 'PI':
+            if metodo == 'Ziegler-Nichols Malha Aberta':
+                self.t1ControlP = (0.9*TauCD)/(K*Delay)
+                self.t1ControlI = self.t1ControlP/(Delay/0.3)
+            if metodo == 'Cohen-Coon':
+                self.t1ControlP = (0.9/K)*(TauCD/Delay+0.092)
+                self.t1ControlI = self.t1ControlP/(3.33*Delay*((TauCD+0.092*Delay)/(TauCD+2.22*Delay)))
+            if metodo == 'ITAE - Entradas de Referência':
+                self.t1ControlP = (0.586/K)*(TauCD/Delay)**(-0.916)
+                self.t1ControlI = self.t1ControlP/(TauCD/(1.03-0.165*(Delay/TauCD)))
+            if metodo == 'ITAE - Rejeição a Perturbações':
+                self.t1ControlP = (0.859/K)*(TauCD/Delay)**(-0.977)
+                self.t1ControlI = self.t1ControlP/((TauCD/0.674)*(Delay/TauCD)**0.680)
+            if metodo == 'IMC (Sintonia agressiva)':
+                if(TauCD>0):
+                    self.t1ControlP = (1/K)*(TauCD/((0.1*TauCD)+Delay))
+                    self.t1ControlI = self.t1ControlP/TauCD
+                else:
+                    self.t1ControlP = (1/K)*(TauSD/(0.1*TauSD))
+                    self.t1ControlI = self.t1ControlP/TauSD
+            if metodo == 'IMC (Sintonia moderada)':
+                if(TauCD>0):
+                    self.t1ControlP = (1/K)*(TauCD/((1*TauCD)+Delay))
+                    self.t1ControlI = self.t1ControlP/TauCD
+                else:
+                    self.t1ControlP = (1/K)*(TauSD/(1*TauSD))
+                    self.t1ControlI = self.t1ControlP/TauSD
+            if metodo == 'IMC (Sintonia conservativa)':
+                if(TauCD>0):
+                    self.t1ControlP = (1/K)*(TauCD/((10*TauCD)+Delay))
+                    self.t1ControlI = self.t1ControlP/TauCD
+                else:
+                    self.t1ControlP = (1/K)*(TauSD/(10*TauSD))
+                    self.t1ControlI = self.t1ControlP/TauSD
+
+            self.ui.pidT1PDSBox.setValue(self.t1ControlP)
+            self.ui.pidT1IDSBox.setValue(self.t1ControlI)
+            self.ui.pidT1DDSBox.setValue(0)
+
+        elif controlo == 'PID':
+            if metodo == 'Ziegler-Nichols Malha Aberta':
+                self.t1ControlP = TauCD/(K*Delay)
+                self.t1ControlI = self.t1ControlP/(2*Delay)
+                self.t1ControlD = self.t1ControlP*Delay*0.5
+            if metodo == 'Cohen-Coon':
+                self.t1ControlP = (0.9/K)*(TauCD/Delay+0.092)
+                self.t1ControlI = self.t1ControlP/(2.5*Delay*((TauCD+0.185*Delay)/(TauCD+0.611*Delay)))
+                self.t1ControlD = self.t1ControlP*0.37*Delay*(TauCD/(TauCD+0.185*Delay))
+            if metodo == 'IMC (Sintonia agressiva)':
+                if(TauCD>0):
+                    self.t1ControlP = (1/K)*((TauCD+0.5*Delay)/(0.1*TauCD+0.5*Delay))
+                    self.t1ControlI = self.t1ControlP/(TauCD+0.5*Delay)
+                    self.t1ControlD = self.t1ControlP * (TauCD*Delay)/(2*TauCD+Delay)
+                else:
+                    self.t1ControlP = (1/K)*((TauSD)/(0.1*TauSD))
+                    self.t1ControlI = self.t1ControlP/(TauSD)
+                    self.t1ControlD = 0
+            if metodo == 'IMC (Sintonia moderada)':
+                if(TauCD>0):
+                    self.t1ControlP = (1/K)*((TauCD+0.5*Delay)/(1*TauCD+0.5*Delay))
+                    self.t1ControlI = self.t1ControlP/(TauCD+0.5*Delay)
+                    self.t1ControlD = self.t1ControlP * (TauCD*Delay)/(2*TauCD+Delay)
+                else:
+                    self.t1ControlP = (1/K)*((TauSD)/(1*TauSD))
+                    self.t1ControlI = self.t1ControlP/(TauSD)
+                    self.t1ControlD = 0
+            if metodo == 'IMC (Sintonia conservativa)':
+                if(TauCD>0):
+                    self.t1ControlP = (1/K)*((TauCD+0.5*Delay)/(10*TauCD+0.5*Delay))
+                    self.t1ControlI = self.t1ControlP/(TauCD+0.5*Delay)
+                    self.t1ControlD = self.t1ControlP * (TauCD*Delay)/(2*TauCD+Delay)
+                else:
+                    self.t1ControlP = (1/K)*((TauSD)/(10*TauSD))
+                    self.t1ControlI = self.t1ControlP/(TauSD)
+                    self.t1ControlD = 0
+
+            self.ui.pidT1PDSBox.setValue(self.t1ControlP)
+            self.ui.pidT1IDSBox.setValue(self.t1ControlI)
+            self.ui.pidT1DDSBox.setValue(self.t1ControlD)
+
+    def t2CalibrateButtonCB(self):
+        T0, Tss, DeltaTemp, K, TauSD, TauCD, Delay = self.ui.t2ModeloCBox.currentData()
+        K = K/255.0
+        controlo = self.ui.t2ControloCBox.currentText()
+        metodo = self.ui.t2MetodoCBox.currentText()
+
+        if controlo == 'P':
+            if metodo == 'Ziegler-Nichols Malha Aberta':
+                self.t2ControlP = TauCD/(K*Delay)
+            if metodo == 'Cohen-Coon':
+                self.t2ControlP = (1.03/K)*(TauCD/Delay+0.34)
+            if metodo == 'ITAE - Entradas de Referência':
+                self.t2ControlP = (0.2/K)*(TauCD/Delay)**1.22
+            if metodo == 'ITAE - Rejeição a Perturbações':
+                self.t2ControlP = (0.5/K)*(TauCD/Delay)**1.08
+
+            self.ui.pidT2PDSBox.setValue(self.t2ControlP)
+            self.ui.pidT2IDSBox.setValue(0)
+            self.ui.pidT2DDSBox.setValue(0)
+
+        elif controlo == 'PI':
+            if metodo == 'Ziegler-Nichols Malha Aberta':
+                self.t2ControlP = (0.9*TauCD)/(K*Delay)
+                self.t2ControlI = self.t2ControlP/(Delay/0.3)
+            if metodo == 'Cohen-Coon':
+                self.t2ControlP = (0.9/K)*(TauCD/Delay+0.092)
+                self.t2ControlI = self.t2ControlP/(3.33*Delay*((TauCD+0.092*Delay)/(TauCD+2.22*Delay)))
+            if metodo == 'ITAE - Entradas de Referência':
+                self.t2ControlP = (0.586/K)*(TauCD/Delay)**(-0.916)
+                self.t2ControlI = self.t2ControlP/(TauCD/(1.03-0.165*(Delay/TauCD)))
+            if metodo == 'ITAE - Rejeição a Perturbações':
+                self.t2ControlP = (0.859/K)*(TauCD/Delay)**(-0.977)
+                self.t2ControlI = self.t2ControlP/((TauCD/0.674)*(Delay/TauCD)**0.680)
+            if metodo == 'IMC (Sintonia agressiva)':
+                if(TauCD>0):
+                    self.t2ControlP = (1/K)*(TauCD/((0.1*TauCD)+Delay))
+                    self.t2ControlI = self.t2ControlP/TauCD
+                else:
+                    self.t2ControlP = (1/K)*(TauSD/(0.1*TauSD))
+                    self.t2ControlI = self.t2ControlP/TauSD
+            if metodo == 'IMC (Sintonia moderada)':
+                if(TauCD>0):
+                    self.t2ControlP = (1/K)*(TauCD/((1*TauCD)+Delay))
+                    self.t2ControlI = self.t2ControlP/TauCD
+                else:
+                    self.t2ControlP = (1/K)*(TauSD/(1*TauSD))
+                    self.t2ControlI = self.t2ControlP/TauSD
+            if metodo == 'IMC (Sintonia conservativa)':
+                if(TauCD>0):
+                    self.t2ControlP = (1/K)*(TauCD/((10*TauCD)+Delay))
+                    self.t2ControlI = self.t2ControlP/TauCD
+                else:
+                    self.t2ControlP = (1/K)*(TauSD/(10*TauSD))
+                    self.t2ControlI = self.t2ControlP/TauSD
+
+            self.ui.pidT2PDSBox.setValue(self.t2ControlP)
+            self.ui.pidT2IDSBox.setValue(self.t2ControlI)
+            self.ui.pidT2DDSBox.setValue(0)
+
+        elif controlo == 'PID':
+            if metodo == 'Ziegler-Nichols Malha Aberta':
+                self.t2ControlP = TauCD/(K*Delay)
+                self.t2ControlI = self.t2ControlP/(2*Delay)
+                self.t2ControlD = self.t2ControlP*Delay*0.5
+            if metodo == 'Cohen-Coon':
+                self.t2ControlP = (0.9/K)*(TauCD/Delay+0.092)
+                self.t2ControlI = self.t2ControlP/(2.5*Delay*((TauCD+0.185*Delay)/(TauCD+0.611*Delay)))
+                self.t2ControlD = self.t2ControlP*0.37*Delay*(TauCD/(TauCD+0.185*Delay))
+            if metodo == 'IMC (Sintonia agressiva)':
+                if(TauCD>0):
+                    self.t2ControlP = (1/K)*((TauCD+0.5*Delay)/(0.1*TauCD+0.5*Delay))
+                    self.t2ControlI = self.t2ControlP/(TauCD+0.5*Delay)
+                    self.t2ControlD = self.t2ControlP * (TauCD*Delay)/(2*TauCD+Delay)
+                else:
+                    self.t2ControlP = (1/K)*((TauSD)/(0.1*TauSD))
+                    self.t2ControlI = self.t2ControlP/(TauSD)
+                    self.t2ControlD = 0
+            if metodo == 'IMC (Sintonia moderada)':
+                if(TauCD>0):
+                    self.t2ControlP = (1/K)*((TauCD+0.5*Delay)/(1*TauCD+0.5*Delay))
+                    self.t2ControlI = self.t2ControlP/(TauCD+0.5*Delay)
+                    self.t2ControlD = self.t2ControlP * (TauCD*Delay)/(2*TauCD+Delay)
+                else:
+                    self.t2ControlP = (1/K)*((TauSD)/(1*TauSD))
+                    self.t2ControlI = self.t2ControlP/(TauSD)
+                    self.t2ControlD = 0
+            if metodo == 'IMC (Sintonia conservativa)':
+                if(TauCD>0):
+                    self.t2ControlP = (1/K)*((TauCD+0.5*Delay)/(10*TauCD+0.5*Delay))
+                    self.t2ControlI = self.t2ControlP/(TauCD+0.5*Delay)
+                    self.t2ControlD = self.t2ControlP * (TauCD*Delay)/(2*TauCD+Delay)
+                else:
+                    self.t2ControlP = (1/K)*((TauSD)/(10*TauSD))
+                    self.t2ControlI = self.t2ControlP/(TauSD)
+                    self.t2ControlD = 0
+
+            self.ui.pidT2PDSBox.setValue(self.t2ControlP)
+            self.ui.pidT2IDSBox.setValue(self.t2ControlI)
+            self.ui.pidT2DDSBox.setValue(self.t2ControlD)
+
 def main():
     app = QtWidgets.QApplication(sys.argv)
     application = ApplicationWindow()

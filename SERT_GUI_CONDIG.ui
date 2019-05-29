@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>600</height>
+    <height>634</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -92,7 +92,7 @@
             <enum>QTabWidget::Triangular</enum>
            </property>
            <property name="currentIndex">
-            <number>5</number>
+            <number>4</number>
            </property>
            <widget class="QWidget" name="Transistors">
             <attribute name="title">
@@ -522,8 +522,8 @@
                <property name="title">
                 <string>Transistor 1</string>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_7">
-                <item>
+               <layout class="QGridLayout" name="gridLayout_13">
+                <item row="0" column="0">
                  <layout class="QFormLayout" name="formLayout_3">
                   <property name="labelAlignment">
                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -643,6 +643,12 @@
                   </item>
                   <item row="5" column="1">
                    <widget class="QPushButton" name="pidT1StartButton">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>20</height>
+                     </size>
+                    </property>
                     <property name="text">
                      <string>Começar</string>
                     </property>
@@ -666,7 +672,7 @@
                   </item>
                  </layout>
                 </item>
-                <item>
+                <item row="1" column="0">
                  <layout class="QVBoxLayout" name="verticalLayout_3">
                   <item>
                    <layout class="QHBoxLayout" name="horizontalLayout_7">
@@ -692,12 +698,69 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QComboBox" name="t1ControloCBox"/>
+                     <widget class="QComboBox" name="t1ControloCBox">
+                      <item>
+                       <property name="text">
+                        <string>P</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>PI</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>PID</string>
+                       </property>
+                      </item>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="horizontalLayout_15">
+                    <item>
+                     <widget class="QLabel" name="label_28">
+                      <property name="text">
+                       <string>Método:</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QComboBox" name="t1MetodoCBox">
+                      <item>
+                       <property name="text">
+                        <string>Ziegler-Nichols Malha Aberta</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>Cohen-Coon</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>ITAE - Entradas de Referência</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>ITAE - Rejeição a Perturbações</string>
+                       </property>
+                      </item>
+                     </widget>
                     </item>
                    </layout>
                   </item>
                   <item>
                    <widget class="QPushButton" name="t1CalibrateButton">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>20</height>
+                     </size>
+                    </property>
                     <property name="text">
                      <string>Calibrar</string>
                     </property>
@@ -713,8 +776,8 @@
                <property name="title">
                 <string>Transistor 2</string>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_6">
-                <item>
+               <layout class="QGridLayout" name="gridLayout_14">
+                <item row="0" column="0">
                  <layout class="QFormLayout" name="formLayout_4">
                   <property name="labelAlignment">
                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -857,7 +920,7 @@
                   </item>
                  </layout>
                 </item>
-                <item>
+                <item row="1" column="0">
                  <layout class="QVBoxLayout" name="verticalLayout_4">
                   <item>
                    <layout class="QHBoxLayout" name="horizontalLayout_9">
@@ -883,12 +946,69 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QComboBox" name="t2ControloCBox"/>
+                     <widget class="QComboBox" name="t2ControloCBox">
+                      <item>
+                       <property name="text">
+                        <string>P</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>PI</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>PID</string>
+                       </property>
+                      </item>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="horizontalLayout_16">
+                    <item>
+                     <widget class="QLabel" name="label_29">
+                      <property name="text">
+                       <string>Método:</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QComboBox" name="t2MetodoCBox">
+                      <item>
+                       <property name="text">
+                        <string>Ziegler-Nichols Malha Aberta</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>Cohen-Coon</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>ITAE - Entradas de Referência</string>
+                       </property>
+                      </item>
+                      <item>
+                       <property name="text">
+                        <string>ITAE - Rejeição a Perturbações</string>
+                       </property>
+                      </item>
+                     </widget>
                     </item>
                    </layout>
                   </item>
                   <item>
                    <widget class="QPushButton" name="t2CalibrateButton">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>20</height>
+                     </size>
+                    </property>
                     <property name="text">
                      <string>Calibrar</string>
                     </property>
