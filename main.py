@@ -32,7 +32,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.initSetup()
 
-        #TODO Add save button to graphs for data
         #TODO Change serial connection from thread to process
 
 
@@ -124,14 +123,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.sizeOfArraysInSeconds = 3600
         self.graph1_isUpdating = False
         self.graph2_isUpdating = False
-        
 
+        self.temp1Count = 0
         self.temp1T = 0
         self.temp1P = 0
         self.temp1I = 0
         self.temp1D = 0
         self.temp1U = 0
 
+        self.temp2Count = 0
         self.temp2T = 0
         self.temp2P = 0
         self.temp2I = 0
@@ -234,8 +234,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.t1CalibrateButton.clicked.connect(self.t1CalibrateButtonCB)
         #t2CalibrateButton clicked Callback
         self.ui.t2CalibrateButton.clicked.connect(self.t2CalibrateButtonCB)
-        #removeModelButton. clicked Callback
+        #removeModelButton clicked Callback
         self.ui.removeModelButton.clicked.connect(self.removeModelButtonCB)
+        #graph1SaveButton clicked Callback
+        self.ui.graph1SaveButton.clicked.connect(self.graph1SaveButtonCB)
+        #graph1SaveButton clicked Callback
+        self.ui.graph2SaveButton.clicked.connect(self.graph2SaveButtonCB)
+
     #Communication
 
     def getCOMList(self):
@@ -531,8 +536,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.currentModel1HasDelay = True
             self.updateMetodo1ComboBox(self.ui.t1ControloCBox.currentIndex())
 
-
-
     def updateModel2ComboBox(self):
 
         self.ui.t2ModeloCBox.clear()
@@ -557,7 +560,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 else:
                     self.currentModel2HasDelay = True
                 self.updateMetodo2ComboBox(self.ui.t2ControloCBox.currentIndex())
-
 
     def updateMetodo1ComboBox(self, index):
         self.ui.t1MetodoCBox.clear()
@@ -608,6 +610,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.t2MetodoCBox.addItems(txtmetodoslist)
         if (len(self.ModelList["2"]) == 0):
             self.ui.t2CalibrateButton.setEnabled(False)
+
     #Graph
 
     def updateGUI(self):
@@ -800,6 +803,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.serialListenerThread.temperature1DeltaTime = self.temp1TA/1000.0
         self.serialListenerThread.getTemperature1.set()
         self.maxnumberofpoints1 = round(self.sizeOfArraysInSeconds * (1000.0 / self.temp1TA))
+        self.ui.graph1SaveButton.setEnabled(False)
         self.graphArraysSetup(1)
         if not self.guiupdate_qtimer.isActive():
             self.ui.ref3v3RButton.setEnabled(False)
@@ -808,6 +812,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def stopGraph1Update(self):
         self.serialListenerThread.getTemperature1.clear()
+        self.ui.graph1SaveButton.setEnabled(True)
         if not self.graph1_isUpdating and not self.graph2_isUpdating:
             self.guiupdate_qtimer.stop()
             self.ui.ref3v3RButton.setEnabled(True)
@@ -817,6 +822,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.serialListenerThread.temperature2DeltaTime = self.temp2TA / 1000.0
         self.serialListenerThread.getTemperature2.set()
         self.maxnumberofpoints2 = round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA))
+        self.ui.graph2SaveButton.setEnabled(False)
         self.graphArraysSetup(2)
         if not self.guiupdate_qtimer.isActive():
             self.ui.ref3v3RButton.setEnabled(False)
@@ -825,10 +831,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def stopGraph2Update(self):
         self.serialListenerThread.getTemperature2.clear()
+        self.ui.graph2SaveButton.setEnabled(True)
         if not self.graph1_isUpdating and not self.graph2_isUpdating:
             self.guiupdate_qtimer.stop()
             self.ui.ref3v3RButton.setEnabled(True)
             self.ui.ref5vButton.setEnabled(True)
+
             
     #Callbacks
 
@@ -1792,7 +1800,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.currentModel2HasDelay = True
         self.updateMetodo2ComboBox(self.ui.t2ControloCBox.currentIndex())
 
-
     def t1ControloCBoxCIDCB(self, index):
         self.updateMetodo1ComboBox(index)
             
@@ -1998,6 +2005,22 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.pidT2PDSBox.setValue(self.t2ControlP)
             self.ui.pidT2IDSBox.setValue(self.t2ControlI)
             self.ui.pidT2DDSBox.setValue(self.t2ControlD)
+
+    def graph1SaveButtonCB(self):
+        filename = str(QtGui.QFileDialog.getSaveFileName(self, 'Save File', 'dados_plot_1.txt', 'ALL (*.*)'))
+        with open(filename[2:-15], 'w') as file:
+            file.write("Time Temperatura PWM P I D")
+            for i in range(self.temp1Count):
+                line = str(self.temp1Time_x[i]) +" "+ str(self.temp1T_y[i]) +" "+ str(self.temp1U_y[i]) +" "+ str(self.temp1P_y[i]) +" "+ str(self.temp1I_y[i]) +" "+ str(self.temp1D_y[i])+"\n"
+                file.write(line)
+    
+    def graph2SaveButtonCB(self):
+        filename = str(QtGui.QFileDialog.getSaveFileName(self, 'Save File', 'dados_plot_2.txt', 'ALL (*.*)'))
+        with open(filename[2:-15], 'w') as file:
+            file.write("Time Temperatura PWM P I D")
+            for i in range(self.temp2Count):
+                line = str(self.temp2Time_x[i]) +" "+ str(self.temp2T_y[i]) +" "+ str(self.temp2U_y[i]) +" "+ str(self.temp2P_y[i]) +" "+ str(self.temp2I_y[i]) +" "+ str(self.temp2D_y[i])+"\n"
+                file.write(line)
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
