@@ -2,6 +2,7 @@
 
 
 from operator import itemgetter
+from queue import Queue
 import time as t
 import sys
 import os
@@ -12,6 +13,7 @@ import numpy as np
 from serialThread import *
 
 from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt5.QtCore import pyqtSlot
 try:
     from QtCore import QString
 except ImportError:
@@ -261,7 +263,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.comlist_qtimer.start(self.comlist_qtimer_interval)
 
     def serialThreadSetup(self):
-        self.serialListenerThread = serialThread(1, "SerialListener")
+
+        self.serialQueue = Queue()
+
+        self.serialListenerThread = serialThread(1, "SerialListener", self.serialQueue)
 
         self.serialConnectionParameters = []
         self.serialConnectionParameters.append(serial.EIGHTBITS)
@@ -269,10 +274,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.serialConnectionParameters.append(serial.STOPBITS_ONE)
         self.serialConnectionParameters.append(115200)
 
-        self.serialListenerThread.newTemperature1Signal.connect(self.temperature1CB)
-        self.serialListenerThread.newTemperature2Signal.connect(self.temperature2CB)
-
-        self.serialListenerThread.closeEvent.set()
+        self.serialListenerThread.newTemperature1Signal[float].connect(self.temperature1CB)
+        self.serialListenerThread.newTemperature2Signal[float].connect(self.temperature2CB)
 
     def serialThreadStart(self):
 
@@ -285,13 +288,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.is_connected = True
 
     def serialThreadStop(self):
-        self.serialListenerThread.closeEvent.set()
+        self.serialListenerThread.stop()
         self.comlist_qtimer.start(self.comlist_qtimer_interval)
 
         self.is_connected = False
 
     #Modelos
-
+    @pyqtSlot()
     def createModel1(self):
         if self.is_connected and not self.ssReady1:
 
@@ -315,8 +318,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             #Send Input
             self.temp1U = self.ui.t1SBox.value()
-            self.serialListenerThread.transistor1 = self.temp1U
-            self.serialListenerThread.setTransistor1.set()
+            self.serialQueue.put("setTransistor1 " + str(self.temp1U))
 
             #Receber Dados
             self.graph1_isUpdating = True
@@ -329,8 +331,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def finishModel1(self, tss):
 
         self.isCreatingModel1 = False
-        self.serialListenerThread.transistor1 = 0
-        self.serialListenerThread.setTransistor1.set()
+        self.serialQueue.put("setTransistor1 " + str(self.temp1U))
 
         self.graph1_isUpdating = False
         self.ui.temp1StartQButton.setText("Começar")
@@ -380,7 +381,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.temp1IcheckBox.setEnabled(True)
         self.ui.temp1DcheckBox.setEnabled(True)
         self.ui.temp1UcheckBox.setEnabled(True)
-    
+
+    @pyqtSlot()
     def createModel2(self):
         if self.is_connected and not self.ssReady2:
 
@@ -404,8 +406,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             #Send Input
             self.temp2U = self.ui.t2SBox.value()
-            self.serialListenerThread.transistor2 = self.temp2U
-            self.serialListenerThread.setTransistor2.set()
+            self.serialQueue.put("setTransistor2 " + str(self.temp2U))
 
             #Receber Dados
             self.graph2_isUpdating = True
@@ -418,8 +419,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def finishModel2(self, tss):
 
         self.isCreatingModel2 = False
-        self.serialListenerThread.transistor2 = 0
-        self.serialListenerThread.setTransistor2.set()
+        self.serialQueue.put("setTransistor2 " + str(self.temp2U))
 
         self.graph2_isUpdating = False
         self.ui.temp2StartQButton.setText("Começar")
@@ -784,8 +784,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.temp1U_y = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA)))
 
     def startGraph1Update(self):
-        self.serialListenerThread.temperature1DeltaTime = self.temp1TA/1000.0
-        self.serialListenerThread.getTemperature1.set()
+
+        self.serialQueue.put("getTemperature1 Start " + str(self.temp1TA/1000.0))
+
         self.maxnumberofpoints1 = round(self.sizeOfArraysInSeconds * (1000.0 / self.temp1TA))
         self.ui.graph1SaveButton.setEnabled(False)
         self.graphArraysSetup(1)
@@ -795,7 +796,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.guiupdate_qtimer.start(self.guiupdate_qtimer_interval)
 
     def stopGraph1Update(self):
-        self.serialListenerThread.getTemperature1.clear()
+
+        self.serialQueue.put("getTemperature1 Stop")
+
         self.ui.graph1SaveButton.setEnabled(True)
         if not self.graph1_isUpdating and not self.graph2_isUpdating:
             self.guiupdate_qtimer.stop()
@@ -803,8 +806,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.ref5vButton.setEnabled(True)
 
     def startGraph2Update(self):
-        self.serialListenerThread.temperature2DeltaTime = self.temp2TA / 1000.0
-        self.serialListenerThread.getTemperature2.set()
+
+        self.serialQueue.put("getTemperature2 Start " + str(self.temp2TA / 1000.0))
+
         self.maxnumberofpoints2 = round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA))
         self.ui.graph2SaveButton.setEnabled(False)
         self.graphArraysSetup(2)
@@ -814,7 +818,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.guiupdate_qtimer.start(self.guiupdate_qtimer_interval)
 
     def stopGraph2Update(self):
-        self.serialListenerThread.getTemperature2.clear()
+
+        self.serialQueue.put("getTemperature2 Stop")
+
         self.ui.graph2SaveButton.setEnabled(True)
         if not self.graph1_isUpdating and not self.graph2_isUpdating:
             self.guiupdate_qtimer.stop()
@@ -823,10 +829,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             
     #Callbacks
-
+    @pyqtSlot()
     def connectCB(self):
 
-        if not self.serialListenerThread.closeEvent.is_set():
+        if self.is_connected:
             self.stopGraph1Update()
             self.stopGraph2Update()
             self.serialListenerThread.newTemperature1Signal.disconnect(self.temperature1CB)
@@ -835,7 +841,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.setupUi(self)
             self.initSetup()
         elif(self.serialCOM != None):
-            self.serialListenerThread.closeEvent.clear()
             self.serialThreadStart()
             if(self.serialListenerThread.isRunning()):
                 self.ui.Controlo.setCurrentIndex(0)
@@ -864,28 +869,29 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.ui.temp2UcheckBox.setEnabled(True)
                 self.temp2TA = 500
 
+    @pyqtSlot()
     def t1EnviarCB(self):
         if self.is_connected:
             self.temp1U = self.ui.t1SBox.value()
-            self.serialListenerThread.transistor1 = self.temp1U
-            self.serialListenerThread.setTransistor1.set()
+            self.serialQueue.put("setTransistor1 " + str(self.temp1U))
 
+    @pyqtSlot()
     def t2EnviarCB(self):
         if self.is_connected:
             self.temp2U = self.ui.t2SBox.value()
-            self.serialListenerThread.transistor2 = self.temp2U
-            self.serialListenerThread.setTransistor2.set()
+            self.serialQueue.put("setTransistor2 " + str(self.temp2U))
 
+    @pyqtSlot()
     def l1EnviarCB(self):
         if self.is_connected:
-            self.serialListenerThread.led1 = self.ui.l1SBox.value()
-            self.serialListenerThread.setLed1.set()
+            self.serialQueue.put("setLed1 " + str(self.ui.l1SBox.value()))
 
+    @pyqtSlot()
     def l2EnviarCB(self):
         if self.is_connected:
-            self.serialListenerThread.led2 = self.ui.l2SBox.value()
-            self.serialListenerThread.setLed2.set()
+            self.serialQueue.put("setLed2 " + str(self.ui.l2SBox.value()))
 
+    @pyqtSlot(int)
     def temp1TcheckboxCB(self, state):
 
         if state==2:
@@ -896,6 +902,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         #self.graphArraysSetup(1)
         self.graphWindowSetup()
 
+    @pyqtSlot(int)
     def temp1PIDUcheckboxCB(self, state):
 
         for n, plot in self.plots:
@@ -918,6 +925,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         #self.graphArraysSetup(1)
         self.graphWindowSetup()
 
+    @pyqtSlot(int)
     def temp2TcheckboxCB(self, state):
         if state==2:
             self.plots.append((3, 'temp2T'))
@@ -927,6 +935,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         #self.graphArraysSetup(2)
         self.graphWindowSetup()
 
+    @pyqtSlot(int)
     def temp2PIDUcheckboxCB(self, state):
 
         for n, plot in self.plots:
@@ -949,6 +958,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         #self.graphArraysSetup(2)
         self.graphWindowSetup()
 
+    @pyqtSlot()
     def temp1TAEditValidateCB(self):
         if self.temp1TA != None:
             old = str(self.temp1TA)
@@ -983,6 +993,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp1DcheckBox.setEnabled(False)
             self.ui.temp1UcheckBox.setEnabled(False)
 
+    @pyqtSlot()
     def temp2TAEditValidateCB(self):
         if self.temp2TA != None:
             old = str(self.temp2TA)
@@ -1018,6 +1029,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp2DcheckBox.setEnabled(False)
             self.ui.temp2UcheckBox.setEnabled(False)
 
+    @pyqtSlot(float)
     def temperature1CB(self, temp):
         self.temp1T = temp
 
@@ -1083,13 +1095,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             if self.temp1T > self.t1TargetTemp:
                 # Send Input 0
                 self.temp1U = 0
-                self.serialListenerThread.transistor1 = self.temp1U
-                self.serialListenerThread.setTransistor1.set()
+                self.serialQueue.put("setTransistor1 " + str(self.temp1U))
+
             elif self.temp1T <= self.t1TargetTemp:
                 # Send Input 255
                 self.temp1U = 255
-                self.serialListenerThread.transistor1 = self.temp1U
-                self.serialListenerThread.setTransistor1.set()
+                self.serialQueue.put("setTransistor1 " + str(self.temp1U))
 
             time = self.temp1Count * self.temp1TA / 1000.0
             self.temp1T_y[self.temp1Count] = self.temp1T
@@ -1113,8 +1124,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.temp1U = 255
             
             #Send Input
-            self.serialListenerThread.transistor1 = self.temp1U
-            self.serialListenerThread.setTransistor1.set()
+            self.serialQueue.put("setTransistor1 " + str(self.temp1U))
 
             #Store Data
             time = self.temp1Count * self.temp1TA / 1000.0
@@ -1174,8 +1184,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             # Send Input
             self.temp1U = round(self.temp1U)
-            self.serialListenerThread.transistor1 = round(self.temp1U)
-            self.serialListenerThread.setTransistor1.set()
+
+            self.serialQueue.put("setTransistor1 " + str(self.temp1U))
 
             # Store Data
             time = self.temp1Count * self.temp1TA / 1000.0
@@ -1188,6 +1198,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             self.temp1Count = self.temp1Count + 1
 
+    @pyqtSlot(float)
     def temperature2CB(self, temp):
         
         self.temp2T = temp
@@ -1251,13 +1262,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             if self.temp2T > self.t2TargetTemp:
                 # Send Input 0
                 self.temp2U = 0
-                self.serialListenerThread.transistor2 = self.temp2U
-                self.serialListenerThread.setTransistor2.set()
+                self.serialQueue.put("setTransistor2 " + str(self.temp2U))
             elif self.temp2T <= self.t2TargetTemp:
                 # Send Input 255
                 self.temp2U = 255
-                self.serialListenerThread.transistor2 = self.temp2U
-                self.serialListenerThread.setTransistor2.set()
+                self.serialQueue.put("setTransistor2 " + str(self.temp2U))
 
             #Store Data
             time = self.temp2Count * self.temp2TA / 1000.0
@@ -1282,8 +1291,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.temp2U = 255
 
             # Send Input
-            self.serialListenerThread.transistor2 = self.temp2U
-            self.serialListenerThread.setTransistor2.set()
+            self.serialQueue.put("setTransistor2 " + str(self.temp2U))
 
             # Store Data
             time = self.temp2Count * self.temp2TA / 1000.0
@@ -1344,8 +1352,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             # Send Input
             self.temp2U = round(self.temp2U)
-            self.serialListenerThread.transistor2 = round(self.temp2U)
-            self.serialListenerThread.setTransistor2.set()
+            self.serialQueue.put("setTransistor2 " + str(self.temp2U))
 
             # Store Data
             time = self.temp2Count * self.temp2TA / 1000.0
@@ -1358,6 +1365,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             self.temp2Count = self.temp2Count + 1
 
+    @pyqtSlot()
     def temp1StartQCB(self):
         if self.graph1_isUpdating:
             self.graph1_isUpdating = False
@@ -1368,6 +1376,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp1StartQButton.setText("Parar")
             self.startGraph1Update()
 
+    @pyqtSlot()
     def temp2StartQCB(self):
         if self.graph2_isUpdating:
             self.graph2_isUpdating = False
@@ -1378,10 +1387,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.temp2StartQButton.setText("Parar")
             self.startGraph2Update()
 
+    @pyqtSlot()
     def switchADRef(self):
         if self.is_connected:
-            self.serialListenerThread.swithADREF.set()
+            self.serialQueue.put("swithADREF")
 
+    @pyqtSlot(int)
     def currentChangedControloCB(self, index):
         if not self.is_connected:
             self.ui.Controlo.setCurrentIndex(5)
@@ -1394,6 +1405,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         self.ui.removeModelButton.setEnabled(True)
 
+    @pyqtSlot()
     def removeModelButtonCB(self):
         #t1ModeloCBox currentindexChanged Callback
         self.ui.t1ModeloCBox.currentIndexChanged.disconnect(self.t1ModeloCBoxCIDCB)
@@ -1413,6 +1425,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         #t2ModeloCBox currentindexChanged Callback
         self.ui.t2ModeloCBox.currentIndexChanged.connect(self.t2ModeloCBoxCIDCB)
 
+    @pyqtSlot()
     def ooT1StartCB(self):
         if self.is_connected and not self.isControlOnOff1:
             self.ui.ooT1StartButton.setText("Parar")
@@ -1454,12 +1467,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             # Send Input
             self.temp1U = 0
-            self.serialListenerThread.transistor1 = self.temp1U
-            self.serialListenerThread.setTransistor1.set()
+            self.serialQueue.put("setTransistor1 " + str(self.temp1U))
 
             self.stopGraph1Update()
             self.ui.temp1StartQButton.setText("Começar")
 
+    @pyqtSlot()
     def ooT2StartCB(self):
         if self.is_connected and not self.isControlOnOff2:
             self.ui.ooT2StartButton.setText("Parar")
@@ -1501,12 +1514,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             # Send Input
             self.temp2U = 0
-            self.serialListenerThread.transistor2 = self.temp2U
-            self.serialListenerThread.setTransistor2.set()
+            self.serialQueue.put("setTransistor2 " + str(self.temp2U))
 
             self.stopGraph2Update()
             self.ui.temp2StartQButton.setText("Começar")
 
+    @pyqtSlot()
     def hstT1StartCB(self):
         if self.is_connected and not self.isControlHist1:
             self.ui.hstT1StartButton.setText("Parar")
@@ -1528,8 +1541,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             # Send Input
             self.temp1U = 0
-            self.serialListenerThread.transistor1 = self.temp1U
-            self.serialListenerThread.setTransistor1.set()
+            self.serialQueue.put("setTransistor1 " + str(self.temp1U))
 
             #Receber Dados
             self.graph1_isUpdating = True
@@ -1555,12 +1567,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             # Send Input
             self.temp1U = 0
-            self.serialListenerThread.transistor1 = self.temp1U
-            self.serialListenerThread.setTransistor1.set()
+            self.serialQueue.put("setTransistor1 " + str(self.temp1U))
 
             self.stopGraph1Update()
             self.ui.temp1StartQButton.setText("Começar")
-            
+
+    @pyqtSlot()
     def hstT2StartCB(self):
         if self.is_connected and not self.isControlHist2:
             self.ui.hstT2StartButton.setText("Parar")
@@ -1582,8 +1594,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             # Send Input
             self.temp2U = 0
-            self.serialListenerThread.transistor2 = self.temp2U
-            self.serialListenerThread.setTransistor2.set()
+            self.serialQueue.put("setTransistor2 " + str(self.temp2U))
+
 
             #Receber Dados
             self.graph2_isUpdating = True
@@ -1609,12 +1621,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             # Send Input
             self.temp2U = 0
-            self.serialListenerThread.transistor2 = self.temp2U
-            self.serialListenerThread.setTransistor2.set()
+            self.serialQueue.put("setTransistor2 " + str(self.temp2U))
 
             self.stopGraph2Update()
             self.ui.temp2StartQButton.setText("Começar")
 
+    @pyqtSlot()
     def pidT1StartCB(self):
         if self.is_connected and not self.isControlPID1:
             self.ui.pidT1StartButton.setText("Parar")
@@ -1645,8 +1657,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             # Send Input
             self.temp1U = 0
-            self.serialListenerThread.transistor1 = self.temp1U
-            self.serialListenerThread.setTransistor1.set()
+            self.serialQueue.put("setTransistor1 " + str(self.temp1U))
 
             #Receber Dados
             self.graph1_isUpdating = True
@@ -1673,12 +1684,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             # Send Input
             self.temp1U = 0
-            self.serialListenerThread.transistor1 = self.temp1U
-            self.serialListenerThread.setTransistor1.set()
+            self.serialQueue.put("setTransistor1 " + str(self.temp1U))
 
             self.stopGraph1Update()
             self.ui.temp1StartQButton.setText("Começar")
 
+    @pyqtSlot()
     def pidT2StartCB(self):
         if self.is_connected and not self.isControlPID2:
             self.ui.pidT2StartButton.setText("Parar")
@@ -1709,8 +1720,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             # Send Input
             self.temp2U = 0
-            self.serialListenerThread.transistor2 = self.temp2U
-            self.serialListenerThread.setTransistor2.set()
+
+            self.serialQueue.put("setTransistor2 " + str(self.temp2U))
 
             #Receber Dados
             self.graph2_isUpdating = True
@@ -1737,24 +1748,26 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             # Send Input
             self.temp2U = 0
-            self.serialListenerThread.transistor2 = self.temp2U
-            self.serialListenerThread.setTransistor2.set()
+            self.serialQueue.put("setTransistor2 " + str(self.temp2U))
 
             self.stopGraph2Update()
             self.ui.temp2StartQButton.setText("Começar")
 
+    @pyqtSlot(int)
     def pidT1AWcheckBoxCB(self, state):
         if state == 2:
             self.isControlAW1 = True
         elif state == 0:
             self.isControlAW1 = False
 
+    @pyqtSlot(int)
     def pidT2AWcheckBoxCB(self, state):
         if state == 2:
             self.isControlAW2 = True
         elif state == 0:
             self.isControlAW2 = False
 
+    @pyqtSlot(float)
     def pidT1AWcheckCB(self, value):
         if self.ui.pidT1PDSBox.value() > 0 and self.ui.pidT1IDSBox.value() > 0:
             self.ui.pidT1AWcheckBox.setEnabled(True)
@@ -1762,6 +1775,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.pidT1AWcheckBox.setCheckState(0)
             self.ui.pidT1AWcheckBox.setEnabled(False)
 
+    @pyqtSlot(float)
     def pidT2AWcheckCB(self, value):
         if self.ui.pidT2PDSBox.value() > 0 and self.ui.pidT2IDSBox.value() > 0:
             self.ui.pidT2AWcheckBox.setEnabled(True)
@@ -1769,6 +1783,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.pidT2AWcheckBox.setCheckState(0)
             self.ui.pidT2AWcheckBox.setEnabled(False)
 
+    @pyqtSlot()
     def t1ModeloCBoxCIDCB(self):
         if self.ui.t1ModeloCBox.currentData()[6] <= 0:
             self.currentModel1HasDelay = False
@@ -1776,6 +1791,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.currentModel1HasDelay = True
         self.updateMetodo1ComboBox(self.ui.t1ControloCBox.currentIndex())
 
+    @pyqtSlot()
     def t2ModeloCBoxCIDCB(self):
         if self.ui.t2ModeloCBox.currentData()[6] <= 0:
             self.currentModel2HasDelay = False
@@ -1783,12 +1799,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.currentModel2HasDelay = True
         self.updateMetodo2ComboBox(self.ui.t2ControloCBox.currentIndex())
 
+    @pyqtSlot(int)
     def t1ControloCBoxCIDCB(self, index):
         self.updateMetodo1ComboBox(index)
-            
+
+    @pyqtSlot(int)
     def t2ControloCBoxCIDCB(self, index):
         self.updateMetodo2ComboBox(index)
 
+    @pyqtSlot()
     def t1CalibrateButtonCB(self):
         T0, Tss, DeltaTemp, K, TauSD, TauCD, Delay = self.ui.t1ModeloCBox.currentData()
         K = K/255.0
@@ -1889,6 +1908,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.pidT1IDSBox.setValue(self.t1ControlI)
             self.ui.pidT1DDSBox.setValue(self.t1ControlD)
 
+    @pyqtSlot()
     def t2CalibrateButtonCB(self):
         T0, Tss, DeltaTemp, K, TauSD, TauCD, Delay = self.ui.t2ModeloCBox.currentData()
         K = K/255.0
@@ -1989,6 +2009,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.pidT2IDSBox.setValue(self.t2ControlI)
             self.ui.pidT2DDSBox.setValue(self.t2ControlD)
 
+    @pyqtSlot()
     def graph1SaveButtonCB(self):
         filename = str(QtGui.QFileDialog.getSaveFileName(self, 'Save File', 'dados_plot_1.txt', 'ALL (*.*)'))
         if filename != "(\'\', \'\')":
@@ -2003,7 +2024,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                     for i in range(self.temp1Count):
                         line = str(self.temp1Time_x[i]) +" "+ str(self.temp1T_y[i]) +" "+ str(self.temp1U)+"\n"
                         file.write(line)
-    
+
+    @pyqtSlot()
     def graph2SaveButtonCB(self):
         filename = str(QtGui.QFileDialog.getSaveFileName(self, 'Save File', 'dados_plot_2.txt', 'ALL (*.*)'))
         if filename != "(\'\', \'\')":

@@ -8,7 +8,7 @@ import re
 import json
 import time
 
-from PyQt5 import QtCore
+from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import QThread, pyqtSignal
 
 
@@ -19,19 +19,11 @@ class serialThread (QThread):
     newTemperature2Signal = pyqtSignal(float)
     closedSignal = pyqtSignal()
 
-    def __init__(self, threadID, name):
+    def __init__(self, threadID, name, queue):
         QThread.__init__(self)
-        self.closeEvent = threading.Event() #main thread loop
+        self._isRunning = True
 
-        self.setLed1 = threading.Event()#send pwm to led 1
-        self.setLed2 = threading.Event()#send pwm to led 2
-        self.setTransistor1 = threading.Event()#send pwm to transistor 1
-        self.setTransistor2 = threading.Event()#send pwm to transistor 2
-
-        self.getTemperature1 = threading.Event()#receive temperature 1
-        self.getTemperature2 = threading.Event()#receive temperature 2
-
-        self.swithADREF = threading.Event()#switch ad reference
+        self.in_queue = queue
 
         self.temperature1TimeSet = False
         self.temperature2TimeSet = False
@@ -65,21 +57,90 @@ class serialThread (QThread):
 
         self.serialConnection.open()
         if(self.serialConnection.is_open):
-            while not self.closeEvent.is_set():
+            while self._isRunning:
+                if not self.in_queue.empty():
+                    msg = self.in_queue.get()
+                    print(msg)
+                    args = msg.split()
+                    if args[0] == 'setLed1':
+                        self.led1 = args[1]
+                        packet = bytearray()
+                        packet.append(119)
+                        packet.append(32)
+                        packet.append(ord('5'))
+                        packet.append(32)
 
-                if not self.getTemperature1.is_set() and self.temperature1TimeSet:
-                    self.temperature1TimerStop()
+                        for char in str(self.led1):
+                            packet.append(ord(char))
 
-                if not self.getTemperature2.is_set() and self.temperature2TimeSet:
-                    self.temperature2TimerStop()
+                        packet.append(13)
+                        self.serialConnection.write(packet)
 
-                if self.getTemperature1.is_set() and not self.temperature1TimeSet:
-                    self.temperature1TimerSetup()
-                    self.temperature1TimerStart()
+                    elif args[0] == 'setLed2':
+                        self.led2 = args[1]
+                        packet = bytearray()
+                        packet.append(119)
+                        packet.append(32)
+                        packet.append(ord('6'))
+                        packet.append(32)
+                        for char in str(self.led2):
+                            packet.append(ord(char))
 
-                if self.getTemperature2.is_set() and not self.temperature2TimeSet:
-                    self.temperature2TimerSetup()
-                    self.temperature2TimerStart()
+                        packet.append(13)
+                        self.serialConnection.write(packet)
+                    elif args[0] == 'setTransistor1':
+                        self.transistor1 = args[1]
+                        packet = bytearray()
+                        packet.append(119)
+                        packet.append(32)
+                        packet.append(ord('9'))
+                        packet.append(32)
+                        for char in str(self.transistor1):
+                            packet.append(ord(char))
+                        packet.append(13)
+                        self.serialConnection.write(packet)
+
+                    elif args[0] == 'setTransistor2':
+                        self.transistor2 = args[1]
+                        packet = bytearray()
+                        packet.append(119)
+                        packet.append(32)
+                        packet.append(ord('1'))
+                        packet.append(ord('0'))
+                        packet.append(32)
+                        for char in str(self.transistor2):
+                            packet.append(ord(char))
+
+                        packet.append(13)
+                        self.serialConnection.write(packet)
+                    elif args[0] == 'swithADREF':
+                        packet = bytearray()
+                        packet.append(101)
+                        packet.append(13)
+                        self.serialConnection.write(packet)
+                        if self.adcReference == 3300:
+                            self.adcReference = 5000
+                        else:
+                            self.adcReference = 3300
+                    elif args[0] == 'getTemperature1':
+                        if args[1] == "Start":
+                            self.temperature1DeltaTime = float(args[2])
+                            self.temperature1TimeSet = True
+                            self.temperature1TimerSetup()
+                            self.temperature1TimerStart()
+                        elif args[1] == "Stop":
+                            self.temperature1TimeSet = False
+                            self.temperature1TimerStop()
+
+                    elif args[0] == 'getTemperature2':
+                        if args[1] == "Start":
+                            self.temperature2DeltaTime = float(args[2])
+                            self.temperature2TimeSet = True
+                            self.temperature2TimerSetup()
+                            self.temperature2TimerStart()
+                        elif args[1] == "Stop":
+                            self.temperature2TimeSet = False
+                            self.temperature1TimerStop()
 
                 if time.time() - self.temperature1_oldtime >= self.temperature1DeltaTime and self.temperature1TimeSet:
                     self.temperature1_oldtime = time.time()
@@ -109,75 +170,13 @@ class serialThread (QThread):
                     temperature2 = (temp_volt - 500) * 0.1;
                     self.newTemperature2Signal.emit(temperature2)
 
-                if(self.setLed1.is_set()):
-                    packet = bytearray()
-                    packet.append(119)
-                    packet.append(32)
-                    packet.append(ord('5'))
-                    packet.append(32)
+                QtWidgets.QApplication.processEvents()
 
-                    for char in str(self.led1):
-                        packet.append(ord(char))
-
-                    packet.append(13)
-                    self.serialConnection.write(packet)
-
-                    self.setLed1.clear()
-
-                if(self.setLed2.is_set()):
-                    packet = bytearray()
-                    packet.append(119)
-                    packet.append(32)
-                    packet.append(ord('6'))
-                    packet.append(32)
-                    for char in str(self.led2):
-                        packet.append(ord(char))
-
-                    packet.append(13)
-                    self.serialConnection.write(packet)
-
-                    self.setLed2.clear()
-
-                if (self.setTransistor1.is_set()):
-                    packet = bytearray()
-                    packet.append(119)
-                    packet.append(32)
-                    packet.append(ord('9'))
-                    packet.append(32)
-                    for char in str(self.transistor1):
-                        packet.append(ord(char))
-                    packet.append(13)
-                    self.serialConnection.write(packet)
-
-                    self.setTransistor1.clear()
-
-                if (self.setTransistor2.is_set()):
-                    packet = bytearray()
-                    packet.append(119)
-                    packet.append(32)
-                    packet.append(ord('1'))
-                    packet.append(ord('0'))
-                    packet.append(32)
-                    for char in str(self.transistor2):
-                        packet.append(ord(char))
-
-                    packet.append(13)
-                    self.serialConnection.write(packet)
-
-                    self.setTransistor2.clear()
-
-                if self.swithADREF.is_set():
-                    packet = bytearray()
-                    packet.append(101)
-                    packet.append(13)
-                    self.serialConnection.write(packet)
-                    if self.adcReference == 3300:
-                        self.adcReference = 5000
-                    else:
-                        self.adcReference = 3300
-                    self.swithADREF.clear()
 
         self.serialConnection.close()
+
+    def stop(self):
+        self._isRunning = False
 
     def temperature1TimerSetup(self):
         self.temperature1_oldtime = time.time()
