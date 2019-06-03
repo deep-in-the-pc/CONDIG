@@ -32,9 +32,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.initSetup()
 
-        #TODO Change serial connection from thread to process
-
-
     def initSetup(self):
         # SerialThread
         self.serialThreadSetup()
@@ -47,13 +44,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         self.loadModelos()
 
+        # CallBacks
+        self.setupCallbacks()
+
         #update model list
         self.updateModelListView()
         self.updateModel1ComboBox()
         self.updateModel2ComboBox()
-
-        # CallBacks
-        self.setupCallbacks()
 
     def setupVariables(self):
         #Serial
@@ -298,6 +295,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def createModel1(self):
         if self.is_connected and not self.ssReady1:
 
+            self.ui.t1ModelTBrowser.clear()
+
             #disable all other transistor 1 related functions
             self.ui.t1CriarModeloButton.setEnabled(False)
             self.ui.t1EnviarButton.setEnabled(False)
@@ -384,6 +383,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     
     def createModel2(self):
         if self.is_connected and not self.ssReady2:
+
+            self.ui.t2ModelTBrowser.clear()
 
             #disable all other transistor 2 related functions
             self.ui.t2CriarModeloButton.setEnabled(False)
@@ -515,7 +516,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def updateModel1ComboBox(self):
 
+        #t1ModeloCBox currentindexChanged Callback
+        self.ui.t1ModeloCBox.currentIndexChanged.disconnect(self.t1ModeloCBoxCIDCB)
+
         self.ui.t1ModeloCBox.clear()
+
+        #t2ModeloCBox currentindexChanged Callback
+        self.ui.t1ModeloCBox.currentIndexChanged.connect(self.t1ModeloCBoxCIDCB)
 
         for modelo in self.ModelList["1"]:
             parameters = self.ModelList["1"][modelo]
@@ -538,7 +545,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def updateModel2ComboBox(self):
 
+        #t2ModeloCBox currentindexChanged Callback
+        self.ui.t2ModeloCBox.currentIndexChanged.disconnect(self.t2ModeloCBoxCIDCB)
+
         self.ui.t2ModeloCBox.clear()
+
+        #t2ModeloCBox currentindexChanged Callback
+        self.ui.t2ModeloCBox.currentIndexChanged.connect(self.t2ModeloCBoxCIDCB)
 
         for modelo in self.ModelList["2"]:
             parameters = self.ModelList["2"][modelo]
@@ -551,15 +564,16 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
 
 
-            self.ui.t2CalibrateButton.setEnabled(True)
-            if (len(self.ModelList["2"]) == 0):
-                self.ui.t2CalibrateButton.setEnabled(False)
+        self.ui.t2CalibrateButton.setEnabled(True)
+
+        if (len(self.ModelList["2"]) == 0):
+            self.ui.t2CalibrateButton.setEnabled(False)
+        else:
+            if self.ui.t2ModeloCBox.currentData()[6] <= 0:
+                self.currentModel2HasDelay = False
             else:
-                if self.ui.t2ModeloCBox.currentData()[6] <= 0:
-                    self.currentModel2HasDelay = False
-                else:
-                    self.currentModel2HasDelay = True
-                self.updateMetodo2ComboBox(self.ui.t2ControloCBox.currentIndex())
+                self.currentModel2HasDelay = True
+            self.updateMetodo2ComboBox(self.ui.t2ControloCBox.currentIndex())
 
     def updateMetodo1ComboBox(self, index):
         self.ui.t1MetodoCBox.clear()
@@ -618,112 +632,83 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         for n, plot in self.plots:
             if n == 1:
                 if self.graph1_isUpdating:
-                    for item in self.plotsObjects[nplots][0].listDataItems():
-                        if item.name() == "Temperatura 1":
-                            self.plotsObjects[nplots][0].removeItem(item)
-                    temp = self.plotsObjects[nplots][0].plot(self.temp1Time_x[:self.temp1Count], self.temp1T_y[:self.temp1Count], pen=(255, 0, 0),name="Temperatura 1")
-                    self.plotsObjects[nplots][1].removeItem('Temperatura 1')
-                    self.plotsObjects[nplots][1].addItem(temp, 'Temperatura 1')
+                    if 'temp1' not in self.plotCurves:
+                        self.plotCurves['temp1'] = self.plotsObjects[nplots].plot(name='Temperatura')
+                    self.plotCurves['temp1'].setData(self.temp1Time_x[:self.temp1Count], self.temp1T_y[:self.temp1Count], pen=(255, 0, 0))
                 nplots = nplots + 1
             elif n == 2:
                 if self.graph1_isUpdating:
 
                     if 'P' in plot:
-                        for item in self.plotsObjects[nplots][0].listDataItems():
-                            if item.name() == "Componente proporcional 1":
-                                self.plotsObjects[nplots][0].removeItem(item)
-                        temp = self.plotsObjects[nplots][0].plot(self.temp1Time_x[:self.temp1Count], self.temp1P_y[:self.temp1Count], pen=(255, 0, 0),
-                                                                 name="Componente proporcional 1")
-                        self.plotsObjects[nplots][1].removeItem('Componente proporcional 1')
-                        self.plotsObjects[nplots][1].addItem(temp, 'Componente proporcional 1')
+                        if 'p1' not in self.plotCurves:
+                            self.plotCurves['p1'] = self.plotsObjects[nplots].plot(name='Componente proporcional')
+                        self.plotCurves['p1'].setData(self.temp1Time_x[:self.temp1Count],
+                                                         self.temp1P_y[:self.temp1Count], pen=(255, 0, 0))
                     if 'I' in plot:
-                        for item in self.plotsObjects[nplots][0].listDataItems():
-                            if item.name() == "Componente integrativa 1":
-                                self.plotsObjects[nplots][0].removeItem(item)
-                        temp = self.plotsObjects[nplots][0].plot(self.temp1Time_x[:self.temp1Count], self.temp1I_y[:self.temp1Count], pen=(0, 255, 0),
-                                                                 name="Componente integrativa 1")
-                        self.plotsObjects[nplots][1].removeItem('Componente integrativa 1')
-                        self.plotsObjects[nplots][1].addItem(temp, 'Componente integrativa 1')
+                        if 'i1' not in self.plotCurves:
+                            self.plotCurves['i1'] = self.plotsObjects[nplots].plot(name='Componente integrativa')
+                        self.plotCurves['i1'].setData(self.temp1Time_x[:self.temp1Count],
+                                                         self.temp1I_y[:self.temp1Count], pen=(0, 255, 0))
                     if 'D' in plot:
-                        for item in self.plotsObjects[nplots][0].listDataItems():
-                            if item.name() == "Componente derivativa 1":
-                                self.plotsObjects[nplots][0].removeItem(item)
-                        temp = self.plotsObjects[nplots][0].plot(self.temp1Time_x[:self.temp1Count], self.temp1D_y[:self.temp1Count], pen=(0, 0, 255),
-                                                                 name="Componente derivativa 1")
-                        self.plotsObjects[nplots][1].removeItem('Componente derivativa 1')
-                        self.plotsObjects[nplots][1].addItem(temp, 'Componente derivativa 1')
+                        if 'd1' not in self.plotCurves:
+                            self.plotCurves['d1'] = self.plotsObjects[nplots].plot(name='Componente derivativa')
+                        self.plotCurves['d1'].setData(self.temp1Time_x[:self.temp1Count],
+                                                         self.temp1D_y[:self.temp1Count], pen=(0, 0, 255))
                     if 'U' in plot:
-                        for item in self.plotsObjects[nplots][0].listDataItems():
-                            if item.name() == "Sinal de Controlo 1":
-                                self.plotsObjects[nplots][0].removeItem(item)
-                        temp = self.plotsObjects[nplots][0].plot(self.temp1Time_x[:self.temp1Count], self.temp1U_y[:self.temp1Count], pen=(191, 191, 0),
-                                                                 name="Sinal de Controlo 1")
-                        self.plotsObjects[nplots][1].removeItem('Sinal de Controlo 1')
-                        self.plotsObjects[nplots][1].addItem(temp, 'Sinal de Controlo 1')
-
+                        if 'u1' not in self.plotCurves:
+                            self.plotCurves['u1'] = self.plotsObjects[nplots].plot(name="Sinal de Controlo")
+                        self.plotCurves['u1'].setData(self.temp1Time_x[:self.temp1Count],
+                                                         self.temp1U_y[:self.temp1Count], pen=(50, 50, 50))
                 nplots = nplots + 1
 
             elif n == 3:
                 if self.graph2_isUpdating:
-
-                    for item in self.plotsObjects[nplots][0].listDataItems():
-                        if item.name() == "Temperatura 2":
-                            self.plotsObjects[nplots][0].removeItem(item)
-                    temp = self.plotsObjects[nplots][0].plot(self.temp2Time_x[:self.temp2Count], self.temp2T_y[:self.temp2Count], pen=(255, 0, 0),name="Temperatura 2")
-                    self.plotsObjects[nplots][1].removeItem('Temperatura 2')
-                    self.plotsObjects[nplots][1].addItem(temp, 'Temperatura 2')
+                    if self.graph1_isUpdating:
+                        if 'temp2' not in self.plotCurves:
+                            self.plotCurves['temp2'] = self.plotsObjects[nplots].plot(name='Temperatura')
+                        self.plotCurves['temp2'].setData(self.temp2Time_x[:self.temp2Count],
+                                                         self.temp2T_y[:self.temp2Count], pen=(255, 0, 0))
                 nplots = nplots + 1
 
             elif n == 4:
                 if self.graph2_isUpdating:
 
                     if 'P' in plot:
-                        for item in self.plotsObjects[nplots][0].listDataItems():
-                            if item.name() == "Componente proporcional 2":
-                                self.plotsObjects[nplots][0].removeItem(item)
-                        temp = self.plotsObjects[nplots][0].plot(self.temp2Time_x[:self.temp2Count], self.temp2P_y[:self.temp2Count], pen=(255, 0, 0),
-                                                                 name="Componente proporcional 2")
-                        self.plotsObjects[nplots][1].removeItem('Componente proporcional 2')
-                        self.plotsObjects[nplots][1].addItem(temp, 'Componente proporcional 2')
+                        if 'p2' not in self.plotCurves:
+                            self.plotCurves['p2'] = self.plotsObjects[nplots].plot(name='Componente proporcional')
+                        self.plotCurves['p2'].setData(self.temp2Time_x[:self.temp2Count],
+                                                         self.temp2P_y[:self.temp2Count], pen=(255, 0, 0))
                     if 'I' in plot:
-                        for item in self.plotsObjects[nplots][0].listDataItems():
-                            if item.name() == "Componente integrativa 2":
-                                self.plotsObjects[nplots][0].removeItem(item)
-                        temp = self.plotsObjects[nplots][0].plot(self.temp2Time_x[:self.temp2Count], self.temp2I_y[:self.temp2Count], pen=(0, 255, 0),
-                                                                 name="Componente integrativa 2")
-                        self.plotsObjects[nplots][1].removeItem('Componente integrativa 2')
-                        self.plotsObjects[nplots][1].addItem(temp, 'Componente integrativa 2')
+                        if 'i2' not in self.plotCurves:
+                            self.plotCurves['i2'] = self.plotsObjects[nplots].plot(name='Componente integrativa')
+                        self.plotCurves['i2'].setData(self.temp2Time_x[:self.temp2Count],
+                                                         self.temp2I_y[:self.temp2Count], pen=(0, 255, 0))
                     if 'D' in plot:
-                        for item in self.plotsObjects[nplots][0].listDataItems():
-                            if item.name() == "Componente derivativa 2":
-                                self.plotsObjects[nplots][0].removeItem(item)
-                        temp = self.plotsObjects[nplots][0].plot(self.temp2Time_x[:self.temp2Count], self.temp2D_y[:self.temp2Count], pen=(0, 0, 255),
-                                                                 name="Componente derivativa 2")
-                        self.plotsObjects[nplots][1].removeItem('Componente derivativa 2')
-                        self.plotsObjects[nplots][1].addItem(temp, 'Componente derivativa 2')
+                        if 'd2' not in self.plotCurves:
+                            self.plotCurves['d2'] = self.plotsObjects[nplots].plot(name='Componente derivativa')
+                        self.plotCurves['d2'].setData(self.temp2Time_x[:self.temp2Count],
+                                                         self.temp2D_y[:self.temp2Count], pen=(0, 0, 255))
                     if 'U' in plot:
-                        for item in self.plotsObjects[nplots][0].listDataItems():
-                            if item.name() == "Sinal de Controlo 2":
-                                self.plotsObjects[nplots][0].removeItem(item)
-                        temp = self.plotsObjects[nplots][0].plot(self.temp2Time_x[:self.temp2Count], self.temp2U_y[:self.temp2Count], pen=(191, 191, 0),
-                                                                 name="Sinal de Controlo 2")
-                        self.plotsObjects[nplots][1].removeItem('Sinal de Controlo 2')
-                        self.plotsObjects[nplots][1].addItem(temp, 'Sinal de Controlo 2')
+                        if 'u2' not in self.plotCurves:
+                            self.plotCurves['u2'] = self.plotsObjects[nplots].plot(name="Sinal de Controlo")
+                        self.plotCurves['u2'].setData(self.temp2Time_x[:self.temp2Count],
+                                                         self.temp2U_y[:self.temp2Count], pen=(50, 50, 50))
 
                 nplots = nplots + 1
 
     def graphWindowSetup(self):
         self.ui.graphWindow.clear()
         self.plotsObjects = []
+        self.plotCurves = {}
         self.plots.sort(key=itemgetter(0))
         nplots = 0
         for n, plot in self.plots:
             if n == 1:
                 plot = self.ui.graphWindow.addPlot(row=nplots, col=0, title='Temperatura 1')
+
                 plot.showGrid(x=True, y=True, alpha=0.7)
-                legend = LegendItem((80, 30), offset=(60, 30))
-                legend.setParentItem(plot)
-                self.plotsObjects.append((plot, legend))
+                plot.addLegend()
+                self.plotsObjects.append(plot)
                 nplots = nplots + 1
             elif n == 2:
 
@@ -738,17 +723,15 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                     txt = txt + 'U'
                 plot = self.ui.graphWindow.addPlot(row=nplots, col=0, title=txt)
                 plot.showGrid(x=True, y=True, alpha=0.7)
-                legend = LegendItem((80, 30), offset=(60, 30))
-                legend.setParentItem(plot)
-                self.plotsObjects.append((plot, legend))
+                plot.addLegend()
+                self.plotsObjects.append(plot)
                 nplots = nplots + 1
             elif n == 3:
 
                 plot = self.ui.graphWindow.addPlot(row=nplots, col=0, title='Temperatura 2')
                 plot.showGrid(x=True, y=True, alpha=0.7)
-                legend = LegendItem((80, 30), offset=(60, 30))
-                legend.setParentItem(plot)
-                self.plotsObjects.append((plot, legend))
+                plot.addLegend()
+                self.plotsObjects.append(plot)
                 nplots = nplots + 1
             elif n == 4:
 
@@ -764,9 +747,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
                 plot = self.ui.graphWindow.addPlot(row=nplots, col=0, title=txt)
                 plot.showGrid(x=True, y=True, alpha=0.7)
-                legend = LegendItem((80, 30), offset=(60, 30))
-                legend.setParentItem(plot)
-                self.plotsObjects.append((plot, legend))
+                plot.addLegend()
+                self.plotsObjects.append(plot)
                 nplots = nplots + 1
 
     def graphArraysSetup(self, plot):
@@ -784,6 +766,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.temp1Count = 0
                 self.temp1Time_x = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp1TA)))
                 self.temp1T_y = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp1TA)))
+                self.temp1U_y = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp1TA)))
         elif plot == 2:
             if not self.isCreatingModel2:
                 self.temp2Count = 0
@@ -798,6 +781,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.temp2Count = 0
                 self.temp2Time_x = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA)))
                 self.temp2T_y = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA)))
+                self.temp1U_y = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA)))
 
     def startGraph1Update(self):
         self.serialListenerThread.temperature1DeltaTime = self.temp1TA/1000.0
@@ -1075,7 +1059,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             time = self.temp1Count * self.temp1TA / 1000.0
             self.temp1T_y[self.temp1Count] = self.temp1T
             self.temp1Time_x[self.temp1Count] = time
-
+            self.temp1U_y[self.temp1Count] = self.temp1U
 
             #Check if last 30 seconds are stable
             if self.temp1Time_x[self.temp1Count] > 30:
@@ -1165,7 +1149,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
                 #Anti Windup
                 self.temp1I = self.temp1I + self.t1ControlI * (self.temp1TA / 1000.0 ) * erro + ((self.temp1TA / 1000.0) / self.t1ControlAWTt) * (self.temp1U - pwm);
-
             else:
                 erro = self.t1TargetTemp - self.temp1T
 
@@ -1245,7 +1228,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             time = self.temp2Count * self.temp2TA / 1000.0
             self.temp2T_y[self.temp2Count] = self.temp2T
             self.temp2Time_x[self.temp2Count] = time
-
+            self.temp2U_y[self.temp2Count] = self.temp2U
 
             #Check if last 30 seconds are stable
             if self.temp2Time_x[self.temp2Count] > 30:
@@ -1703,6 +1686,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.t2ControlP = self.ui.pidT2PDSBox.value()
             self.t2ControlI = self.ui.pidT2IDSBox.value()
             self.t2ControlD = self.ui.pidT2DDSBox.value()
+            
+            if self.isControlAW2 and self.t2ControlD > 0:
+                self.t2ControlAWTt = math.sqrt((self.t2ControlP/self.t2ControlI)*(self.t2ControlD/self.t2ControlP))
+            elif self.isControlAW2 and self.t2ControlD == 0:
+                self.t2ControlAWTt = 0.5*(self.t2ControlP/self.t2ControlI)
+			
             self.isControlPID2 = True
 
             #disable all other transistor 2 related functions
@@ -1716,9 +1705,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.pidT2DDSBox.setEnabled(False)
             self.ui.temp2TAEdit.setEnabled(False)
             self.ui.temp2StartQButton.setEnabled(False)
-            self.ui.temp2PcheckBox.setEnabled(False)
-            self.ui.temp2IcheckBox.setEnabled(False)
-            self.ui.temp2DcheckBox.setEnabled(False)
             self.ui.pidT2AWcheckBox.setEnabled(False)
 
             # Send Input
@@ -1747,14 +1733,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.pidT2DDSBox.setEnabled(True)
             self.ui.temp2TAEdit.setEnabled(True)
             self.ui.temp2StartQButton.setEnabled(True)
-            self.ui.temp2PcheckBox.setEnabled(True)
-            self.ui.temp2IcheckBox.setEnabled(True)
-            self.ui.temp2DcheckBox.setEnabled(True)
             self.ui.pidT2AWcheckBox.setEnabled(True)
 
             # Send Input
             self.temp2U = 0
-            self.serialListenerThread.transistor1 = self.temp2U
+            self.serialListenerThread.transistor2 = self.temp2U
             self.serialListenerThread.setTransistor2.set()
 
             self.stopGraph2Update()
@@ -2008,19 +1991,33 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def graph1SaveButtonCB(self):
         filename = str(QtGui.QFileDialog.getSaveFileName(self, 'Save File', 'dados_plot_1.txt', 'ALL (*.*)'))
-        with open(filename[2:-15], 'w') as file:
-            file.write("Time Temperatura PWM P I D")
-            for i in range(self.temp1Count):
-                line = str(self.temp1Time_x[i]) +" "+ str(self.temp1T_y[i]) +" "+ str(self.temp1U_y[i]) +" "+ str(self.temp1P_y[i]) +" "+ str(self.temp1I_y[i]) +" "+ str(self.temp1D_y[i])+"\n"
-                file.write(line)
+        if filename != "(\'\', \'\')":
+            with open(filename[2:-15], 'w') as file:
+                if not self.isCreatingModel1:
+                    file.write("Time Temperatura PWM P I D")
+                    for i in range(self.temp1Count):
+                        line = str(self.temp1Time_x[i]) +" "+ str(self.temp1T_y[i]) +" "+ str(self.temp1U_y[i]) +" "+ str(self.temp1P_y[i]) +" "+ str(self.temp1I_y[i]) +" "+ str(self.temp1D_y[i])+"\n"
+                        file.write(line)
+                else:
+                    file.write("Time Temperatura PWM")
+                    for i in range(self.temp1Count):
+                        line = str(self.temp1Time_x[i]) +" "+ str(self.temp1T_y[i]) +" "+ str(self.temp1U)+"\n"
+                        file.write(line)
     
     def graph2SaveButtonCB(self):
         filename = str(QtGui.QFileDialog.getSaveFileName(self, 'Save File', 'dados_plot_2.txt', 'ALL (*.*)'))
-        with open(filename[2:-15], 'w') as file:
-            file.write("Time Temperatura PWM P I D")
-            for i in range(self.temp2Count):
-                line = str(self.temp2Time_x[i]) +" "+ str(self.temp2T_y[i]) +" "+ str(self.temp2U_y[i]) +" "+ str(self.temp2P_y[i]) +" "+ str(self.temp2I_y[i]) +" "+ str(self.temp2D_y[i])+"\n"
-                file.write(line)
+        if filename != "(\'\', \'\')":
+            with open(filename[2:-15], 'w') as file:
+                if not self.isCreatingModel2:
+                    file.write("Time Temperatura PWM P I D")
+                    for i in range(self.temp2Count):
+                        line = str(self.temp2Time_x[i]) +" "+ str(self.temp2T_y[i]) +" "+ str(self.temp2U_y[i]) +" "+ str(self.temp2P_y[i]) +" "+ str(self.temp2I_y[i]) +" "+ str(self.temp2D_y[i])+"\n"
+                        file.write(line)
+                if self.isCreatingModel2:
+                    file.write("Time Temperatura PWM")
+                    for i in range(self.temp2Count):
+                        line = str(self.temp2Time_x[i]) +" "+ str(self.temp2T_y[i]) +" "+ str(self.temp2U)+"\n"
+                        file.write(line)			
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
