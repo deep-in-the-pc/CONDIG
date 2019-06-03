@@ -60,7 +60,6 @@ class serialThread (QThread):
             while self._isRunning:
                 if not self.in_queue.empty():
                     msg = self.in_queue.get()
-                    print(msg)
                     args = msg.split()
                     if args[0] == 'setLed1':
                         self.led1 = args[1]
