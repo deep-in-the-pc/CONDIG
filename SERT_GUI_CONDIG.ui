@@ -26,7 +26,11 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>PySERT</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>pyserticon.ico</normaloff>pyserticon.ico</iconset>
   </property>
   <property name="unifiedTitleAndToolBarOnMac">
    <bool>false</bool>
@@ -94,9 +98,9 @@
            <property name="currentIndex">
             <number>5</number>
            </property>
-           <widget class="QWidget" name="Transistors">
+           <widget class="QWidget" name="Transistores">
             <attribute name="title">
-             <string>Transistors</string>
+             <string>Transistores</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout">
              <item>

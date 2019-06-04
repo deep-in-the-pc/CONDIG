@@ -310,10 +310,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.hstT1StartButton.setEnabled(False)
             self.ui.pidT1StartButton.setEnabled(False)
             self.ui.t1CalibrateButton.setEnabled(False)
-            self.ui.temp1PcheckBox.setEnabled(False)
-            self.ui.temp1IcheckBox.setEnabled(False)
-            self.ui.temp1DcheckBox.setEnabled(False)
-            self.ui.temp1UcheckBox.setEnabled(False)
             self.isCreatingModel1 = True
 
             #Send Input
@@ -331,7 +327,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def finishModel1(self, tss):
 
         self.isCreatingModel1 = False
-        self.serialQueue.put("setTransistor1 " + str(self.temp1U))
+        self.serialQueue.put("setTransistor1 0")
 
         self.graph1_isUpdating = False
         self.ui.temp1StartQButton.setText("Começar")
@@ -377,10 +373,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.hstT1StartButton.setEnabled(True)
         self.ui.pidT1StartButton.setEnabled(True)
         self.ui.t1CalibrateButton.setEnabled(True)
-        self.ui.temp1PcheckBox.setEnabled(True)
-        self.ui.temp1IcheckBox.setEnabled(True)
-        self.ui.temp1DcheckBox.setEnabled(True)
-        self.ui.temp1UcheckBox.setEnabled(True)
 
     @pyqtSlot()
     def createModel2(self):
@@ -398,10 +390,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ui.hstT2StartButton.setEnabled(False)
             self.ui.pidT2StartButton.setEnabled(False)
             self.ui.t2CalibrateButton.setEnabled(False)
-            self.ui.temp2PcheckBox.setEnabled(False)
-            self.ui.temp2IcheckBox.setEnabled(False)
-            self.ui.temp2DcheckBox.setEnabled(False)
-            self.ui.temp2UcheckBox.setEnabled(False)
             self.isCreatingModel2 = True
 
             #Send Input
@@ -419,7 +407,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def finishModel2(self, tss):
 
         self.isCreatingModel2 = False
-        self.serialQueue.put("setTransistor2 " + str(self.temp2U))
+        self.serialQueue.put("setTransistor2 0")
 
         self.graph2_isUpdating = False
         self.ui.temp2StartQButton.setText("Começar")
@@ -464,10 +452,6 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.hstT2StartButton.setEnabled(True)
         self.ui.pidT2StartButton.setEnabled(True)
         self.ui.t2CalibrateButton.setEnabled(True)
-        self.ui.temp2PcheckBox.setEnabled(True)
-        self.ui.temp2IcheckBox.setEnabled(True)
-        self.ui.temp2DcheckBox.setEnabled(True)
-        self.ui.temp2UcheckBox.setEnabled(True)
 
     def enableSteadyStateReady1(self):
         self.ssReady1 = True
@@ -663,11 +647,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
             elif n == 3:
                 if self.graph2_isUpdating:
-                    if self.graph1_isUpdating:
-                        if 'temp2' not in self.plotCurves:
-                            self.plotCurves['temp2'] = self.plotsObjects[nplots].plot(name='Temperatura')
-                        self.plotCurves['temp2'].setData(self.temp2Time_x[:self.temp2Count],
-                                                         self.temp2T_y[:self.temp2Count], pen=(255, 0, 0))
+                    if 'temp2' not in self.plotCurves:
+                        self.plotCurves['temp2'] = self.plotsObjects[nplots].plot(name='Temperatura')
+                    self.plotCurves['temp2'].setData(self.temp2Time_x[:self.temp2Count],
+                                                     self.temp2T_y[:self.temp2Count], pen=(255, 0, 0))
                 nplots = nplots + 1
 
             elif n == 4:
@@ -781,7 +764,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.temp2Count = 0
                 self.temp2Time_x = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA)))
                 self.temp2T_y = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA)))
-                self.temp1U_y = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA)))
+                self.temp2U_y = np.zeros(round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA)))
 
     def startGraph1Update(self):
 
@@ -2011,7 +1994,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def graph1SaveButtonCB(self):
-        filename = str(QtGui.QFileDialog.getSaveFileName(self, 'Save File', 'dados_plot_1.txt', 'ALL (*.*)'))
+        filename = str(QtGui.QFileDialog.getSaveFileName(self, 'Save File', 'dados/dados_plot_1.txt', 'ALL (*.*)'))
         if filename != "(\'\', \'\')":
             with open(filename[2:-15], 'w') as file:
                 if not self.isCreatingModel1:
@@ -2027,7 +2010,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def graph2SaveButtonCB(self):
-        filename = str(QtGui.QFileDialog.getSaveFileName(self, 'Save File', 'dados_plot_2.txt', 'ALL (*.*)'))
+        filename = str(QtGui.QFileDialog.getSaveFileName(self, 'Save File', 'dados/dados_plot_2.txt', 'ALL (*.*)'))
         if filename != "(\'\', \'\')":
             with open(filename[2:-15], 'w') as file:
                 if not self.isCreatingModel2:

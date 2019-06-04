@@ -139,7 +139,7 @@ class serialThread (QThread):
                             self.temperature2TimerStart()
                         elif args[1] == "Stop":
                             self.temperature2TimeSet = False
-                            self.temperature1TimerStop()
+                            self.temperature2TimerStop()
 
                 if time.time() - self.temperature1_oldtime >= self.temperature1DeltaTime and self.temperature1TimeSet:
                     self.temperature1_oldtime = time.time()
