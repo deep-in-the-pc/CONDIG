@@ -26,6 +26,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(ApplicationWindow, self).__init__()
 
+        self.creditosdialog()
+
         #PyQtGraph config
         setConfigOption('background', 'w')
         setConfigOption('foreground', 'k')
@@ -140,11 +142,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def setupTimers(self):
         self.comlist_qtimer = QtCore.QTimer(self)
         self.comlist_qtimer.timeout.connect(self.getCOMList)
-        self.comlist_qtimer_interval = 100
+        self.comlist_qtimer_interval = round(1000/10) #10hz
         self.comlist_qtimer.start(self.comlist_qtimer_interval)
         self.guiupdate_qtimer = QtCore.QTimer(self)
         self.guiupdate_qtimer.timeout.connect(self.updateGUI)
-        self.guiupdate_qtimer_interval = 1000
+        self.guiupdate_qtimer_interval = round(1000/60) #60hz
 
     def setupCallbacks(self):
         #CallBacks
@@ -240,6 +242,20 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         #graph1SaveButton clicked Callback
         self.ui.graph2SaveButton.clicked.connect(self.graph2SaveButtonCB)
 
+    def creditosdialog(self):
+        msg = QtWidgets.QMessageBox()
+
+        f = QtGui.QFont('unexistent')
+        f.setStyleHint(QtGui.QFont.Monospace)
+        msg.setFont(f)
+
+        msg.setWindowIcon(QtGui.QIcon('pyserticon.ico'))
+        msg.setText("Programa criado por:")
+        msg.setInformativeText("David Carvalho\t1160640\nJosé Oliveira\t1160955\nAndré Moura\t1161150\n\nCONDIG 2018/2019")
+        msg.setWindowTitle("PySERT")
+        msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        msg.exec_()
+
     #Communication
 
     def getCOMList(self):
@@ -254,11 +270,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.serialCOM = None
 
         if len(comlist)>0 and self.comlist_qtimer_interval == 100:
-            self.comlist_qtimer_interval = 2000
+            self.comlist_qtimer_interval = round(1000/0.5) #0.5hz
             self.comlist_qtimer.stop()
             self.comlist_qtimer.start(self.comlist_qtimer_interval)
         else:
-            self.comlist_qtimer_interval = 100
+            self.comlist_qtimer_interval = round(1000/10) #10hz
             self.comlist_qtimer.stop()
             self.comlist_qtimer.start(self.comlist_qtimer_interval)
 
@@ -361,7 +377,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.updateModelListView()
         self.updateModel1ComboBox()
 
-        txt = "T0: "+str(self.modelo1Temp0)+"\nTss: "+str(self.modelo1TempSS)+"\n\u0394T: "+str(self.modelo1DeltaTemp)+"\n K: "+str(self.modelo1K)+"\n\nModelo sem delay:\n\n\u03C4: "+str(self.modelo1TauSD)+"\n\nModelo com delay:\n\n\u03C4: "+str(self.modelo1TauCD)+"\n \u03C4D: "+str(self.modelo1Delay)
+
+        f = QtGui.QFont('unexistent')
+        f.setStyleHint(QtGui.QFont.Monospace)
+        self.ui.t1ModelTBrowser.setFont(f)
+
+        txt = "T0:\t"+str(self.modelo1Temp0)+"\nTss:\t"+str(self.modelo1TempSS)+"\n\u0394T:\t"+str(self.modelo1DeltaTemp)+"\nK:\t"+str(self.modelo1K)+"\n\nModelo sem delay:\n\n\u03C4:\t"+str(self.modelo1TauSD)+"\n\nModelo com delay:\n\n\u03C4:\t"+str(self.modelo1TauCD)+"\n\u03C4D:\t"+str(self.modelo1Delay)
         self.ui.t1ModelTBrowser.setText(txt)
 
         self.ui.t1CriarModeloButton.setEnabled(True)
@@ -440,7 +461,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         self.updateModelListView()
         self.updateModel2ComboBox()
-        txt = "T0: "+str(self.modelo2Temp0)+"\nTss: "+str(self.modelo2TempSS)+"\n\u0394T: "+str(self.modelo2DeltaTemp)+"\n K: "+str(self.modelo2K)+"\n\nModelo sem delay:\n\n\u03C4: "+str(self.modelo2TauSD)+"\n\nModelo com delay:\n\n\u03C4: "+str(self.modelo2TauCD)+"\n \u03C4D: "+str(self.modelo2Delay)
+
+        f = QtGui.QFont('unexistent')
+        f.setStyleHint(QtGui.QFont.Monospace)
+        self.ui.t2ModelTBrowser.setFont(f)
+
+        txt = "T0:\t"+str(self.modelo2Temp0)+"\nTss:\t"+str(self.modelo2TempSS)+"\n\u0394T:\t"+str(self.modelo2DeltaTemp)+"\nK:\t"+str(self.modelo2K)+"\n\nModelo sem delay:\n\n\u03C4:\t"+str(self.modelo2TauSD)+"\n\nModelo com delay:\n\n\u03C4:\t"+str(self.modelo2TauCD)+"\n\u03C4D:\t"+str(self.modelo2Delay)
         self.ui.t2ModelTBrowser.setText(txt)
 
         self.ui.t2CriarModeloButton.setEnabled(True)
@@ -1382,8 +1408,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def modelListWidgetICCB(self, item):
         Temp0, TempSS, DeltaTemp, K, TauSD, TauCD, Delay = item.data(32)
-
-        txt = "T0: "+str(Temp0)+"\nTss: "+str(TempSS)+"\n\u0394T: "+str(DeltaTemp)+"\n K: "+str(K)+"\n\nModelo sem delay:\n\n\u03C4: "+str(TauSD)+"\n\nModelo com delay:\n\n\u03C4: "+str(TauCD)+"\n \u03C4D: "+str(Delay)
+        f = QtGui.QFont('unexistent')
+        f.setStyleHint(QtGui.QFont.Monospace)
+        self.ui.modelosTextBrowser.setFont(f)
+        txt = "T0:\t"+str(Temp0)+"\nTss:\t"+str(TempSS)+"\n\u0394T:\t"+str(DeltaTemp)+"\nK:\t"+str(K)+"\n\nModelo sem delay:\n\n\u03C4:\t"+str(TauSD)+"\n\nModelo com delay:\n\n\u03C4:\t"+str(TauCD)+"\n\u03C4D:\t"+str(Delay)
         self.ui.modelosTextBrowser.setText(txt)
 
         self.ui.removeModelButton.setEnabled(True)
@@ -2022,7 +2050,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                     file.write("Time Temperatura PWM")
                     for i in range(self.temp2Count):
                         line = str(self.temp2Time_x[i]) +" "+ str(self.temp2T_y[i]) +" "+ str(self.temp2U)+"\n"
-                        file.write(line)			
+                        file.write(line)
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
