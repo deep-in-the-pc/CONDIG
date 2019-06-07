@@ -21,10 +21,13 @@ class serialThread (QThread):
 
     def __init__(self, threadID, name, queue):
         QThread.__init__(self)
+        # Current state of the thread
         self._isRunning = True
 
+        # Queue for incoming commands
         self.in_queue = queue
 
+        # Flag for periodic temperature collecting
         self.temperature1TimeSet = False
         self.temperature2TimeSet = False
 
@@ -32,15 +35,19 @@ class serialThread (QThread):
         self.name = name
         self.serialConnection = serial.Serial()
 
+        # Time between samples in miliseconds
         self.temperature1DeltaTime = 0
         self.temperature2DeltaTime = 0
 
+        # PWM value from 0-255 for led intensity
         self.led1 = 0
         self.led2 = 0
 
+        # PWM value from 0-255 for transistor intensity
         self.transistor1 = 0
         self.transistor2 = 0
 
+        # Reference used to calculate voltage
         self.adcReference = 3300
 
         self.temperature1TimerSetup()

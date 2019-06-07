@@ -26,14 +26,16 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(ApplicationWindow, self).__init__()
 
-        #self.creditosdialog()
+        self.creditosdialog()
 
         #PyQtGraph config
         setConfigOption('background', 'w')
         setConfigOption('foreground', 'k')
 
+        #Start UI
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        #Setup variables, timers, callbacks, ...
         self.initSetup()
 
     def initSetup(self):
@@ -243,6 +245,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.graph2SaveButton.clicked.connect(self.graph2SaveButtonCB)
 
     def creditosdialog(self):
+        #Message at startup
         msg = QtWidgets.QMessageBox()
 
         f = QtGui.QFont('unexistent')
@@ -260,7 +263,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def getCOMList(self):
 
+        #Searches ports for available COMs
         comlist = [comport.device for comport in serial.tools.list_ports.comports()]
+
+        #Updates Current COM and COM selection combobox
         if len(comlist) != self.ui.portaCBox.count():
             self.ui.portaCBox.clear()
             self.ui.portaCBox.addItems(comlist)
@@ -268,6 +274,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         if self.ui.portaCBox.count() == 0:
             self.serialCOM = None
+
+        #Changes speed of search depending on amount of COMs available found
 
         if len(comlist)>0 and self.comlist_qtimer_interval == 100:
             self.comlist_qtimer_interval = round(1000/0.5) #0.5hz
@@ -279,6 +287,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.comlist_qtimer.start(self.comlist_qtimer_interval)
 
     def serialThreadSetup(self):
+
+        #Initializes all the serial thread variables
 
         self.serialQueue = Queue()
 
@@ -295,6 +305,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def serialThreadStart(self):
 
+        #Start the serial thread
+
         self.serialConnectionParameters.append(self.serialCOM)
         self.serialListenerThread.setParameteres(self.serialConnectionParameters)
 
@@ -304,6 +316,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.is_connected = True
 
     def serialThreadStop(self):
+
+        #Stop the serial thread
+
         self.serialListenerThread.stop()
         self.comlist_qtimer.start(self.comlist_qtimer_interval)
 
@@ -312,6 +327,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     #Modelos
     @pyqtSlot()
     def createModel1(self):
+
+        #Initialize the model creation
+
         if self.is_connected and not self.ssReady1:
 
             self.ui.t1ModelTBrowser.clear()
@@ -341,6 +359,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ssReady1Clicked = True
 
     def finishModel1(self, tss):
+
+        #Finish the model and calculate parameters
+
         self.stopGraph1Update()
         self.isCreatingModel1 = False
         self.serialQueue.put("setTransistor1 0")
@@ -399,6 +420,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def createModel2(self):
+
+        # Initialize the model creation
+
         if self.is_connected and not self.ssReady2:
 
             self.ui.t2ModelTBrowser.clear()
@@ -428,6 +452,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ssReady2Clicked = True
 
     def finishModel2(self, tss):
+
+        # Finish the model and calculate parameters
+
         self.stopGraph2Update()
         self.isCreatingModel2 = False
         self.serialQueue.put("setTransistor2 0")
@@ -496,10 +523,16 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.t2CriarModeloButton.setText("Terminar Modelo")
 
     def saveModelo(self):
+
+        #Save model to json file
+
         with open("modelos.json", 'w') as outfile:
             json.dump(self.ModelList, outfile, indent=4)
 
     def loadModelos(self):
+
+        #Load models from json file
+
         try:
             with open("modelos.json") as json_file:
                 self.ModelList = json.load(json_file)
@@ -1661,6 +1694,11 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             elif self.isControlAW1 and self.t1ControlD == 0:
                 self.t1ControlAWTt = 0.5*(self.t1ControlP/self.t1ControlI)
 
+            self.temp1P = 0
+            self.temp1I = 0
+            self.temp1D = 0
+            self.t1ControlLastError = 0
+
             self.isControlPID1 = True
 
             #disable all other transistor 1 related functions
@@ -1723,7 +1761,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
                 self.t2ControlAWTt = math.sqrt((self.t2ControlP/self.t2ControlI)*(self.t2ControlD/self.t2ControlP))
             elif self.isControlAW2 and self.t2ControlD == 0:
                 self.t2ControlAWTt = 0.5*(self.t2ControlP/self.t2ControlI)
-			
+
+            self.temp2P = 0
+            self.temp2I = 0
+            self.temp2D = 0
+            self.t2ControlLastError = 0
+
             self.isControlPID2 = True
 
             #disable all other transistor 2 related functions
