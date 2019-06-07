@@ -11,7 +11,7 @@ import datetime
 import math
 import numpy as np
 from serialThread import *
-
+from scipy.signal import savgol_filter
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import pyqtSlot
 try:
@@ -26,7 +26,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(ApplicationWindow, self).__init__()
 
-        self.creditosdialog()
+        #self.creditosdialog()
 
         #PyQtGraph config
         setConfigOption('background', 'w')
@@ -341,7 +341,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ssReady1Clicked = True
 
     def finishModel1(self, tss):
-
+        self.stopGraph1Update()
         self.isCreatingModel1 = False
         self.serialQueue.put("setTransistor1 0")
 
@@ -349,20 +349,22 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.temp1StartQButton.setText("Começar")
         self.ssReady1 = False
         self.ui.t1CriarModeloButton.setText("Criar Modelo")
-        self.stopGraph1Update()
-
+        window = round(len(self.temp1T_y) * .013)
+        if window % 2 == 0:
+            window = window + 1
+        tempFiltered = savgol_filter(self.temp1T_y, window, 2)
         self.modelo1Temp0 = round(self.temp1T_y[0],3)
         self.modelo1TempSS = round(tss,3)
         self.modelo1DeltaTemp = round(self.modelo1TempSS - self.modelo1Temp0,3)
         self.modelo1K = round(self.modelo1DeltaTemp / (self.temp1U/255.0),3)
 
-        index = np.where(self.temp1T_y >= (self.modelo1DeltaTemp*0.632)+self.modelo1Temp0)[0]
+        index = np.where(tempFiltered >= (self.modelo1DeltaTemp*0.632)+self.modelo1Temp0)[0]
 
         self.modelo1TauSD = round(self.temp1Time_x[index[0]],3)
 
-        t1index = np.where(self.temp1T_y >= (self.modelo1DeltaTemp*0.283)+self.modelo1Temp0)[0]
+        t1index = np.where(tempFiltered >= (self.modelo1DeltaTemp*0.283)+self.modelo1Temp0)[0]
         t1 = self.temp1Time_x[t1index[0]]
-        t2index = np.where(self.temp1T_y >= (self.modelo1DeltaTemp*0.632)+self.modelo1Temp0)[0]
+        t2index = np.where(tempFiltered >= (self.modelo1DeltaTemp*0.632)+self.modelo1Temp0)[0]
         t2 = self.temp1Time_x[t2index[0]]
 
 
@@ -426,7 +428,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.ssReady2Clicked = True
 
     def finishModel2(self, tss):
-
+        self.stopGraph2Update()
         self.isCreatingModel2 = False
         self.serialQueue.put("setTransistor2 0")
 
@@ -434,20 +436,24 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.temp2StartQButton.setText("Começar")
         self.ssReady2 = False
         self.ui.t2CriarModeloButton.setText("Criar Modelo")
-        self.stopGraph2Update()
+
+        window = round(len(self.temp2T_y) * .013)
+        if window % 2 == 0:
+            window = window + 1
+        tempFiltered = savgol_filter(self.temp2T_y, window, 2)
 
         self.modelo2Temp0 = round(self.temp2T_y[0],3)
         self.modelo2TempSS = round(tss,3)
         self.modelo2DeltaTemp = round(self.modelo2TempSS - self.modelo2Temp0,3)
         self.modelo2K = round(self.modelo2DeltaTemp / (self.temp2U/255.0),3)
 
-        index = np.where(self.temp2T_y >= (self.modelo2DeltaTemp*0.632)+self.modelo2Temp0)[0]
+        index = np.where(tempFiltered >= (self.modelo2DeltaTemp*0.632)+self.modelo2Temp0)[0]
 
         self.modelo2TauSD = round(self.temp2Time_x[index[0]],3)
 
-        t1index = np.where(self.temp2T_y >= (self.modelo2DeltaTemp*0.283)+self.modelo2Temp0)[0]
+        t1index = np.where(tempFiltered >= (self.modelo2DeltaTemp*0.283)+self.modelo2Temp0)[0]
         t1 = self.temp2Time_x[t1index[0]]
-        t2index = np.where(self.temp2T_y >= (self.modelo2DeltaTemp*0.632)+self.modelo2Temp0)[0]
+        t2index = np.where(tempFiltered >= (self.modelo2DeltaTemp*0.632)+self.modelo2Temp0)[0]
         t2 = self.temp2Time_x[t2index[0]]
 
 
@@ -1081,13 +1087,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.temp1T_y[self.temp1Count] = self.temp1T
             self.temp1Time_x[self.temp1Count] = time
             self.temp1U_y[self.temp1Count] = self.temp1U
-
-            #Check if last 30 seconds are stable
-            if self.temp1Time_x[self.temp1Count] > 30:
-                ns = round(30*(1000.0/self.temp1TA))
+            stability_s = 10
+            #Check if last x seconds are stable
+            if self.temp1Time_x[self.temp1Count] > stability_s:
+                ns = round(stability_s*(1000.0/self.temp1TA))
                 avrg = sum(self.temp1T_y[self.temp1Count-ns:self.temp1Count])/ns
                 avrgerror = sum(abs(self.temp1T_y[self.temp1Count-ns:self.temp1Count] - avrg)) / ns
-                if avrgerror < 0.3 and not self.ssReady1: #permitir ao utilizado terminar o modelo manualmente
+                if avrgerror < 0.9 and not self.ssReady1: #permitir ao utilizado terminar o modelo manualmente
                     self.enableSteadyStateReady1()
                 if avrgerror < 0.05 or self.ssReady1Clicked: # certeza superior a 99.95%
                     self.ssReady1Clicked = False
@@ -1249,16 +1255,16 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.temp2T_y[self.temp2Count] = self.temp2T
             self.temp2Time_x[self.temp2Count] = time
             self.temp2U_y[self.temp2Count] = self.temp2U
-
-            #Check if last 30 seconds are stable
-            if self.temp2Time_x[self.temp2Count] > 30:
-                ns = round(30*(1000.0/self.temp2TA))
+            stability_s = 10
+            #Check if last x seconds are stable
+            if self.temp2Time_x[self.temp2Count] > stability_s:
+                ns = round(stability_s*(1000.0/self.temp2TA))
                 avrg = sum(self.temp2T_y[self.temp2Count-ns:self.temp2Count])/ns
                 avrgerror = sum(abs(self.temp2T_y[self.temp2Count-ns:self.temp2Count] - avrg)) / ns
                 if avrgerror < 0.05 or self.ssReady2Clicked: # certeza superior a 99.95%
                     self.finishModel2(avrg)
                     return
-                if avrgerror < 0.3 and not self.ssReady2: #permitir ao utilizado terminar o modelo manualmente
+                if avrgerror < 0.9 and not self.ssReady2: #permitir ao utilizado terminar o modelo manualmente
                     self.enableSteadyStateReady2()
             self.temp2Count = self.temp2Count + 1
             if self.temp2Count == round(self.sizeOfArraysInSeconds * (1000.0 / self.temp2TA)):
@@ -1378,10 +1384,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def temp1StartQCB(self):
         if self.graph1_isUpdating:
             self.graph1_isUpdating = False
+            self.ui.temp1TAEdit.setEnabled(True)
             self.ui.temp1StartQButton.setText("Começar")
             self.stopGraph1Update()
         else:
             self.graph1_isUpdating = True
+            self.ui.temp1TAEdit.setEnabled(False)
             self.ui.temp1StartQButton.setText("Parar")
             self.startGraph1Update()
 
@@ -1389,10 +1397,12 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def temp2StartQCB(self):
         if self.graph2_isUpdating:
             self.graph2_isUpdating = False
+            self.ui.temp2TAEdit.setEnabled(True)
             self.ui.temp2StartQButton.setText("Começar")
             self.stopGraph2Update()
         else:
             self.graph2_isUpdating = True
+            self.ui.temp2TAEdit.setEnabled(False)
             self.ui.temp2StartQButton.setText("Parar")
             self.startGraph2Update()
 
@@ -2026,7 +2036,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if filename != "(\'\', \'\')":
             with open(filename[2:-15], 'w') as file:
                 if not self.isCreatingModel1:
-                    file.write("Time Temperatura PWM P I D")
+                    file.write("Time Temperatura PWM P I D\n")
                     for i in range(self.temp1Count):
                         line = str(self.temp1Time_x[i]) +" "+ str(self.temp1T_y[i]) +" "+ str(self.temp1U_y[i]) +" "+ str(self.temp1P_y[i]) +" "+ str(self.temp1I_y[i]) +" "+ str(self.temp1D_y[i])+"\n"
                         file.write(line)
@@ -2042,7 +2052,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         if filename != "(\'\', \'\')":
             with open(filename[2:-15], 'w') as file:
                 if not self.isCreatingModel2:
-                    file.write("Time Temperatura PWM P I D")
+                    file.write("Time Temperatura PWM P I D\n")
                     for i in range(self.temp2Count):
                         line = str(self.temp2Time_x[i]) +" "+ str(self.temp2T_y[i]) +" "+ str(self.temp2U_y[i]) +" "+ str(self.temp2P_y[i]) +" "+ str(self.temp2I_y[i]) +" "+ str(self.temp2D_y[i])+"\n"
                         file.write(line)
